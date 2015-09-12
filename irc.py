@@ -2,6 +2,7 @@ import socket
 import logging
 import sys
 import re
+import time
 
 logging.basicConfig(format='%(asctime)s %(message)s', stream=sys.stderr, level=logging.DEBUG)
 
@@ -15,7 +16,6 @@ should probably move recieving stuff to its own method, and make it use yield or
 we may consider having __enter__/__exit__ methods so we can use this like:
     with IRCConnection() as irc:
         irc.register(...)
-some kind of recv_until('PING...', callback_method, call_back_args) would be super useful
 '''
 class IRCConnection:
     def __init__(self, addr, port, timeout=10.0):
@@ -24,22 +24,34 @@ class IRCConnection:
         self.conn.connect((net, port)) # would move to __enter__ if we do that
 
     def send(self, message):
-        self.conn.send(message)
+        self.conn.send(message + '\r\n')
         logging.debug('SEND ' + message)
+
+    def join(self, channel):
+        self.send('JOIN {0}'.format(channel))
+
+    def recv_forever(self, recv_bufsz=1024):
+        read = ''
+        while 1:
+            try:
+                read = self.conn.recv(recv_bufsz)
+                logging.info('RECV ' + read)
+                yield read
+            except socket.timeout:
+                continue
+
+    def send_rg_msg(self, user, nick, realname):
+        time.sleep(1)
+        self.send('NICK {0}'.format(nick))
+        self.send('USER {0} {0} {0}.lug.udel.edu :{1}'.format(user, realname))
+        self.recv_until('.*End of.*', self.join, ('#bot'))
+        self.recv_forever()
 
     def register(self, user, nick, realname=None):
         if realname == None:
             realname = user
-        # some servers, wait for PING :randomstr and respond with PONG :randomstr
-        read = ''
-        while 1:
-            try:
-                read = self.conn.recv(1024)
-                logging.info('RECV ' + read)
-            except socket.timeout:
-                self.send('NICK {0}\r\n'.format(nick))
-                self.send('USER {0} 0 * :{1}'.format(user, realname))
-                break
+        # TODO some servers, wait for PING :randomstr and respond with PONG :randomstr
+        self.recv_until('.*resolve your hostname.*', self.send_rg_msg, (user, nick, realname))
 
     ''' usage: recv_until('^PING :([a-z]+)', self.pong, 'foo second argument')
     this'll call self.pong with the matching group of the regex as the first argument
@@ -59,7 +71,10 @@ class IRCConnection:
                 logging.info('BREAK ON ' + break_rx)
                 broken = True
         # this function should do some kind of send action
-        callback(cb_args)
+        if cb_args is not None:
+            callback(*cb_args)
+        else:
+            callback()
 
 net = 'irc.lug.udel.edu'
 #net = 'snowball.lug.udel.edu'
