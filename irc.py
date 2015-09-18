@@ -13,15 +13,20 @@ irc protocol
 
 notes:
 should probably move recieving stuff to its own method, and make it use yield or something so we can call it like a generator
-we may consider having __enter__/__exit__ methods so we can use this like:
-    with IRCConnection() as irc:
-        irc.register(...)
 '''
 class IRCConnection:
     def __init__(self, addr, port, timeout=10.0):
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.conn.settimeout(10.0)
-        self.conn.connect((net, port)) # would move to __enter__ if we do that
+    
+    # set up the socket connection and be ready for sending data
+    def __enter__(self):
+        self.conn.connect((net, port))
+        return self
+
+    # close down everything that needs to be closed
+    def __exit__(self, type, value, traceback):
+        self.conn.close()
 
     def send(self, message):
         self.conn.send(message + '\r\n')
@@ -51,7 +56,8 @@ class IRCConnection:
         if realname == None:
             realname = user
         # TODO some servers, wait for PING :randomstr and respond with PONG :randomstr
-        self.recv_until('.*resolve your hostname.*', self.send_rg_msg, (user, nick, realname))
+        # TODO: this doesn't work on servers that aren't running the kind of IRC server that irc.lug does
+        self.recv_until('.*(resolve|Found) your hostname.*', self.send_rg_msg, (user, nick, realname))
 
     ''' usage: recv_until('^PING :([a-z]+)', self.pong, 'foo second argument')
     this'll call self.pong with the matching group of the regex as the first argument
@@ -80,5 +86,5 @@ net = 'irc.lug.udel.edu'
 #net = 'snowball.lug.udel.edu'
 port = 6667
 
-c = IRCConnection(net, port)
-c.register('test', 'test_bot')
+with IRCConnection(net, port) as c:
+    c.register('pbjbt', 'pbjbt')
