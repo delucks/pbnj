@@ -14,7 +14,15 @@ IRC bot we're writing from scratch for fun.
 
 | Class | Description | Important Methods |
 | ----- | ----------- | ----------------- |
-| IRCConnection | handle all direct operations with socket & expose a higher-level interface the bot can interact with | ... |
+| IRCConnection | handle all direct operations with socket & expose a higher-level interface the bot can interact with | recv_forever(), message(), join(), part() |
+| IRCBot | handle all inbound message processing and user interaction | handle(), run() |
+
+## Command Ideas
+
+| Command | Action | Channel/Private/Both? |
+| ------- | ------ | --------------------- |
+| .join {channel} | Join a channel | Both |
+| .log {channel} | Turn on logging for a channel | Both |
 
 ## Possible Pronunciations
 

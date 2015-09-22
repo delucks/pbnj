@@ -38,6 +38,9 @@ class IRCConnection:
     def join(self, channel):
         self.send('JOIN {0}'.format(channel))
 
+    def message(self, channel, message):
+        self.send('PRIVMSG {0} :{1}'.format(channel, message))
+
     def recv_forever(self, recv_bufsz=1024):
         read = ''
         while True:
@@ -113,6 +116,15 @@ class IRCBot:
         else:
             # do something! :D
             pass
+        if msg_object['message']: # TODO: all of this could be simplified into a standard method
+            if msg_object['message'].startswith('.join'):
+                sp = msg_object['message'].split()
+                if len(sp) < 2:
+                    self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
+                else:
+                    # TODO: add support for joining multiple channels 
+                    chan = '#' + sp[1] if not sp[1].startswith('#') else sp[1]
+                    self.join([chan])
 
     def run(self):
         self.conn.register(self.nick, self.name, self.realname)
