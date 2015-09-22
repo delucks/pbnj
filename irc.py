@@ -50,6 +50,7 @@ class IRCConnection:
         read = ''
         while True:
             try:
+                # TODO: read buffer & scaling recv buffer size & split/yield on newlines
                 read = self.conn.recv(recv_bufsz)
                 if read.strip() == '':
                     continue
@@ -72,28 +73,39 @@ class IRCConnection:
         # TODO: this doesn't work on servers that aren't running the kind of IRC server that irc.lug does
         self.send_rg_msg(user, nick, realname)
 
-    ''' usage: recv_until('^PING :([a-z]+)', self.pong, 'foo second argument')
-    this'll call self.pong with the matching group of the regex as the first argument
-    and the string provided as the second
-    TODO: Delete this and move to something more elegant
-    '''
-    def recv_until(self, break_rx, callback, cb_args, recv_bufsz=1024):
-        broken = False
-        buf = ''
-        break_regex = re.compile(break_rx)
-        while not broken:
-            buf = self.conn.recv(recv_bufsz)
-            logging.info('RECV ' + buf)
-            # leave loop if we match the buffer with our regex
-            if break_regex.match(buf):
-                # TODO: add pulling out the matching group from the regex to supply to callback()
-                logging.info('BREAK ON ' + break_rx)
-                broken = True
-        # this function should do some kind of send action
-        if cb_args is not None:
-            callback(*cb_args)
-        else:
-            callback()
+''' handles IRC interactions from a high level (user visible)
+'''
+class IRCBot:
+    def __init__(self, nick, name, connection, realname=None, init_channels=None):
+        self.nick = nick
+        self.name = name
+        self.conn = connection
+        self.realname = realname
+        self.init_channels = init_channels
+
+    def join(self, channels):
+        for channel in channels:
+            self.conn.join(channel)
+
+    def split_msg(self, message):
+        msg_d = {}
+        for item in message.split('\n'):
+            print item
+        m = re.match('^(?:[:](\S+) )?(\S+)(?: (?!:)(.+?))?(?: [:](.+))?$', message)
+        print m.groups()
+
+    # TODO: handle the split message dict
+    def handle(self, msg_object):
+        pass
+
+    def run(self):
+        self.conn.register(self.nick, self.name, self.realname)
+        if self.init_channels is not None:
+            self.join(self.init_channels)
+        # TODO: this doesn't work yet because messages are delimited by 1024 bytes instead of \n
+        for recv_irc_msg in self.conn.recv_forever():
+            self.split_msg(recv_irc_msg)
+            #self.handle(recv_irc_msg) # this is why handle shouldn't block
 
 #net = 'irc.lug.udel.edu'
 net = '127.0.0.1'
@@ -101,10 +113,5 @@ port = 6667
 #port = 6697
 
 with IRCConnection(net, port) as c:
-    c.register('pbjbt', 'pbjbt')
-    c.join('#foo')
-    # we just need to make sure to call recv_forever() like a generator
-    for item in c.recv_forever():
-        if 'foobar' in item:
-            c.join('#bot')
-        print item
+    bot = IRCBot(nick='pbjbt', name='pbjbt', connection=c, init_channels=['#foo'])
+    bot.run()
