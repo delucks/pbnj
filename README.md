@@ -1,4 +1,4 @@
-# b
+# pbjbt
 
 IRC bot we're writing from scratch for fun.
 
@@ -15,3 +15,9 @@ IRC bot we're writing from scratch for fun.
 | Class | Description | Important Methods |
 | ----- | ----------- | ----------------- |
 | IRCConnection | handle all direct operations with socket & expose a higher-level interface the bot can interact with | ... |
+
+## Possible Pronunciations
+
+* pubpuhjamabot
+* pib-jibt
+* peanut butter jelly bot
