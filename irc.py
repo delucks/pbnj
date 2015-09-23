@@ -41,35 +41,20 @@ class IRCConnection:
     def message(self, channel, message):
         self.send('PRIVMSG {0} :{1}'.format(channel, message))
 
-    def recv_forever(self, recv_bufsz=1024):
-        read = ''
+    def recv_forever(self, recv_bufsz=4096):
         while True:
-            try:
-                read = self.conn.recv(recv_bufsz)
-                if read.strip() == '':
-                    continue
-                while '\n' in read:
-                    spl = read.split('\r\n', 1)
-                    if len(spl) > 1:
-                        logging.info('RECV ' + spl[0])
-                        yield spl[0]
-                        read = spl[1]
-                    else:
-                        break # recv 1024 more bytes, looking for a \n
-            except socket.timeout:
-                print 'Got a socket.timeout, carrying on'
-                continue
+            read = self.conn.recv(recv_bufsz)
+            while '\r\n' in read:
+                spl = read.split('\r\n', 1)
+                logging.info('RECV ' + spl[0])
+                yield spl[0]
+                read = spl[1]
 
-    def send_rg_msg(self, user, nick, realname):
-        time.sleep(1)
+    def register(self, user, nick, realname=None):
+        realname = user if not realname else realname
         self.send('NICK {0}'.format(nick))
         hostname = socket.gethostname() # TODO: Add behavior to override the hostname detection
         self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))
-
-    def register(self, user, nick, realname=None):
-        if realname == None:
-            realname = user
-        self.send_rg_msg(user, nick, realname)
 
 ''' handles IRC interactions from a high level (user visible)
 '''
