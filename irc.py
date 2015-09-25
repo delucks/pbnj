@@ -6,6 +6,7 @@ import time
 import argparse
 
 logging.basicConfig(format='%(asctime)s %(message)s', stream=sys.stderr, level=logging.INFO)
+channelize = lambda x: ['#'+c if not c.startswith('#') else c for c in x]
 VERSION='0.01'
 
 ''' sets up the bots connection on a socket level.
@@ -87,6 +88,15 @@ class IRCBot:
             self.channels.remove(channel)
             self.conn.part(channel)
 
+    def split_hostmask(self, hostmask):
+        m = re.match('^([a-zA-Z0-9]+)!~([a-zA-Z0-9\ ]+)@(.*)', hostmask)
+        g = m.groups()
+        return {
+                'nick': g[0],
+                'realname': g[1],
+                'ip': g[2]
+        }
+
     ''' Parse the message into a convenient dictionary
     TODO? direct log this as JSON
     '''
@@ -108,6 +118,7 @@ class IRCBot:
             self.conn.send('PONG :' + msg_object['message'])
         self.handle_version(msg_object)
         self.handle_join(msg_object)
+        self.handle_ping(msg_object)
  
     ''' Decorator to match a regular expression against messages
     then modify the arguments to the decorated function to pull out different properties
@@ -123,6 +134,10 @@ class IRCBot:
             def wrapped(*args):
                 msg_object = args[1]
                 message = msg_object['message']
+                '''
+                technically you could get at 'self' with args[0]
+                if that's the case you can call a self.register_command(... so that the regex is in a dict
+                '''
                 if not message: # commands only apply to private/public messages
                     return None
                 match = re.match(cmd_regex, message)
@@ -130,14 +145,13 @@ class IRCBot:
                     logging.debug('{0} failed to match {1}'.format(func.__name__, message))
                     return None
                 if arg_handling == 'group':
-                    secondary = match.groups()
+                    newargs = (args[0], args[1], match.groups())
                 elif arg_handling == 'first':
-                    secondary = message.split()[1]
+                    newargs = (args[0], args[1], message.split()[1])
                 elif arg_handling == 'pass':
-                    secondary = message.split()[1:]
+                    newargs = (args[0], args[1], message.split()[1:])
                 else: # none
-                    secondary = None
-                newargs = (args[0], args[1], secondary)
+                    newargs = args
                 logging.debug('addCommand[decorator context] calling {0} with {1}'.format(func.__name__, newargs))
                 func(*newargs)
             return wrapped
@@ -148,12 +162,18 @@ class IRCBot:
         if len(channels) < 1:
             self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
             return None
-        chans = ['#'+c if not c.startswith('#') else c for c in channels]
+        chans = channelize(channels)
         self.join(chans)
 
     @addCommand('^.version', 'none')
-    def handle_version(self, msg_object, second_arg):
-        self.conn.message(msg_object['dest'], '{0} version {1}'.format(self.nick, VERSION))
+    def handle_version(self, msg_object):
+        nick = self.split_hostmask(msg_object['hostmask'])['nick']
+        self.conn.message(msg_object['dest'], '{2}: {0} version {1}'.format(self.nick, VERSION, nick))
+
+    @addCommand('^.ping', 'none')
+    def handle_ping(self, msg_object):
+        nick = self.split_hostmask(msg_object['hostmask'])['nick']
+        self.conn.message(msg_object['dest'], '{0}: pong'.format(nick))
 
     ''' set up the bot, join initial channels, start the loop
     '''
@@ -176,11 +196,12 @@ def interactive():
     p.add_argument('--real-name', help='specify different realname to use', default='pbjbt')
     p.add_argument('--hostname', help='specify different hostname to use', default=socket.gethostname())
     p.add_argument('--debug', help='increase logging verbosity to DEBUG', action='store_true')
-    p.add_argument('-c', '--channel', help='channel the bot will join upon connection to the IRC network', type=str)
+    p.add_argument('-c', '--channels', help='channels the bot will join upon connection to the IRC network', nargs='+')
     args = p.parse_args()
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
-    init_channels = args.channel if args.channel is None else [args.channel] # TODO: Remove hack once multiple init_channels support
+    if args.channels:
+        args.channels = channelize(args.channels)
     with IRCConnection(args.network, args.port) as c:
         bot = IRCBot(
                 nick=args.nick,
@@ -188,7 +209,7 @@ def interactive():
                 realname=args.real_name,
                 connection=c,
                 hostname=args.hostname,
-                init_channels=init_channels
+                init_channels=args.channels
         )
         bot.run()
 
