@@ -5,7 +5,7 @@ import re
 import time
 import argparse
 
-logging.basicConfig(format='%(asctime)s %(message)s', stream=sys.stderr, level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(message)s', stream=sys.stderr, level=logging.INFO)
 VERSION='0.01'
 
 ''' sets up the bots connection on a socket level.
@@ -33,7 +33,7 @@ class IRCConnection:
     # basic helper method to tack on a \r\n and log it
     def send(self, message):
         self.conn.send(message + '\r\n')
-        logging.debug('SEND ' + message)
+        logging.info('SEND ' + message)
 
     def part(self, channel):
         self.send('PART {0}'.format(channel))
@@ -47,10 +47,13 @@ class IRCConnection:
     def recv_forever(self, recv_bufsz=4096):
         while True:
             read = self.conn.recv(recv_bufsz)
+            # keep recieving until we get a \r\n
             while '\r\n' in read:
                 spl = read.split('\r\n', 1)
+                # pop of all the text up to/including \r\n
                 logging.info('RECV ' + spl[0])
                 yield spl[0]
+                # reassign to the non-split portion
                 read = spl[1]
 
     def register(self, user, nick, hostname, realname=None):
@@ -70,17 +73,23 @@ class IRCBot:
         self.channels = []
         self.init_channels = init_channels
 
+    ''' joins a bunch of channels
+    '''
     def join(self, channels):
         for channel in channels:
             self.channels.append(channel)
             self.conn.join(channel)
 
+    ''' leaves a bunch of channels :(
+    '''
     def part(self, channels):
         for channel in channels:
             self.channels.remove(channel)
             self.conn.part(channel)
 
-    # Parse the message into a convenient dictionary (TODO: direct log this as JSON?)
+    ''' Parse the message into a convenient dictionary
+    TODO? direct log this as JSON
+    '''
     def split_msg(self, message):
         m = re.match('^(?:[:](\S+) )?(\S+)(?: (?!:)(.+?))?(?: [:](.+))?$', message)
         g = m.groups()
@@ -91,35 +100,71 @@ class IRCBot:
                 'message': g[3]
         }
 
-    # Make sure this method DOES NOT BLOCK! You can hold up the whole bot because it's single threaded!
+    ''' takes a split message object and fires off a bunch of methods to handle it
+    '''
     def handle(self, msg_object):
+        # This is an example of how you would parse a field other than 'message' in this method b4 handlers
         if msg_object['type'] == 'PING':
             self.conn.send('PONG :' + msg_object['message'])
-        if msg_object['dest'] == self.nick:
-            # do something if someone messages you
-            pass
-        elif msg_object['dest'] in self.channels:
-            # do something if there's a message that comes up in a channel you're in
-            pass
-        else:
-            # do something! :D
-            pass
-        if msg_object['message']: # TODO: all of this could be simplified into a standard method
-            if msg_object['message'].startswith('.join'):
-                sp = msg_object['message'].split()
-                if len(sp) < 2:
-                    self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
-                else:
-                    # TODO: add support for joining multiple channels 
-                    chan = '#' + sp[1] if not sp[1].startswith('#') else sp[1]
-                    self.join([chan])
+        self.handle_version(msg_object)
+        self.handle_join(msg_object)
+ 
+    ''' Decorator to match a regular expression against messages
+    then modify the arguments to the decorated function to pull out different properties
+    of the message.
+    This essentially makes each subsequent method a template for this macro-
+        the last argument will always be filled in by the macro
+        the regex and handling stragegy get read by the macro and stay static
+        when called the method has access to non-static information like socket connection
+    not bound to 'self' because decorator is compiled before objects are instantiated
+    '''
+    def addCommand(cmd_regex, arg_handling):
+        def command_decorator(func):
+            def wrapped(*args):
+                msg_object = args[1]
+                message = msg_object['message']
+                if not message: # commands only apply to private/public messages
+                    return None
+                match = re.match(cmd_regex, message)
+                if not match:
+                    logging.debug('{0} failed to match {1}'.format(func.__name__, message))
+                    return None
+                if arg_handling == 'group':
+                    secondary = match.groups()
+                elif arg_handling == 'first':
+                    secondary = message.split()[1]
+                elif arg_handling == 'pass':
+                    secondary = message.split()[1:]
+                else: # none
+                    secondary = None
+                newargs = (args[0], args[1], secondary)
+                logging.debug('addCommand[decorator context] calling {0} with {1}'.format(func.__name__, newargs))
+                func(*newargs)
+            return wrapped
+        return command_decorator
 
+    @addCommand('^.join', 'pass')
+    def handle_join(self, msg_object, channels):
+        if len(channels) < 1:
+            self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
+            return None
+        chans = ['#'+c if not c.startswith('#') else c for c in channels]
+        self.join(chans)
+
+    @addCommand('^.version', 'none')
+    def handle_version(self, msg_object, second_arg):
+        self.conn.message(msg_object['dest'], '{0} version {1}'.format(self.nick, VERSION))
+
+    ''' set up the bot, join initial channels, start the loop
+    '''
     def run(self):
         self.conn.register(self.nick, self.name, self.realname)
         if self.init_channels is not None:
+            logging.debug('IRCBot: Joining initial channels')
             self.join(self.init_channels)
         for recv_irc_msg in self.conn.recv_forever():
             split = self.split_msg(recv_irc_msg)
+            logging.debug('IRCBot: Calling handle() on {0}'.format(split))
             self.handle(split) # this is why handle shouldn't block
 
 def interactive():
@@ -130,8 +175,11 @@ def interactive():
     p.add_argument('--name', help='specify different name to use', default='pbjbt')
     p.add_argument('--real-name', help='specify different realname to use', default='pbjbt')
     p.add_argument('--hostname', help='specify different hostname to use', default=socket.gethostname())
+    p.add_argument('--debug', help='increase logging verbosity to DEBUG', action='store_true')
     p.add_argument('-c', '--channel', help='channel the bot will join upon connection to the IRC network', type=str)
     args = p.parse_args()
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
     init_channels = args.channel if args.channel is None else [args.channel] # TODO: Remove hack once multiple init_channels support
     with IRCConnection(args.network, args.port) as c:
         bot = IRCBot(
