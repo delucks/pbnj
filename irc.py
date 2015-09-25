@@ -3,6 +3,7 @@ import logging
 import sys
 import re
 import time
+import argparse
 
 logging.basicConfig(format='%(asctime)s %(message)s', stream=sys.stderr, level=logging.DEBUG)
 VERSION='0.01'
@@ -14,12 +15,14 @@ utility parts of the irc protocol
 class IRCConnection:
     def __init__(self, addr, port, timeout=10.0):
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.conn.settimeout(10.0)
+        self.addr = addr
+        self.port = port
+        self.conn.settimeout(timeout)
         self.conn.setblocking(1) # will block
     
     # set up the socket connection and be ready for sending data
     def __enter__(self):
-        self.conn.connect((net, port))
+        self.conn.connect((self.addr, self.port))
         return self # TODO: check if this is an incorrect paradigm for __enter__s
 
     # close down everything that needs to be closed
@@ -119,11 +122,19 @@ class IRCBot:
             split = self.split_msg(recv_irc_msg)
             self.handle(split) # this is why handle shouldn't block
 
-#net = 'irc.lug.udel.edu'
-net = '127.0.0.1'
-port = 6667
-#port = 6697
+def interactive():
+    p = argparse.ArgumentParser(description='pbjbt')
+    p.add_argument('-n', '--network', help='FQDN of IRC network to connect to', default='127.0.0.1')
+    p.add_argument('-p', '--port', help='specify different port for the connection', type=int, default=6667)
+    p.add_argument('--nick', help='specify different nickname to use', default='pbjbt')
+    p.add_argument('--name', help='specify different name to use', default='pbjbt')
+    p.add_argument('--real-name', help='specify different realname to use', default='pbjbt')
+    p.add_argument('-c', '--channel', help='channel the bot will join upon connection to the IRC network', type=str)
+    args = p.parse_args()
+    init_channels = args.channel if args.channel is None else [args.channel] # TODO: Remove hack once multiple init_channels support
+    with IRCConnection(args.network, args.port) as c:
+        bot = IRCBot(nick=args.nick, name=args.name, realname=args.real_name, connection=c, init_channels=init_channels)
+        bot.run()
 
-with IRCConnection(net, port) as c:
-    bot = IRCBot(nick='pbjbt', name='pbjbt', connection=c, init_channels=['#foo'])
-    bot.run()
+if __name__ == '__main__':
+    interactive()
