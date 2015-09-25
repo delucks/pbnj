@@ -53,20 +53,20 @@ class IRCConnection:
                 yield spl[0]
                 read = spl[1]
 
-    def register(self, user, nick, realname=None):
+    def register(self, user, nick, hostname, realname=None):
         realname = user if not realname else realname
         self.send('NICK {0}'.format(nick))
-        hostname = socket.gethostname() # TODO: Add behavior to override the hostname detection
         self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))
 
 ''' handles IRC interactions from a high level (user visible)
 '''
 class IRCBot:
-    def __init__(self, nick, name, connection, realname=None, init_channels=None):
+    def __init__(self, nick, name, connection, hostname, realname=None, init_channels=None):
         self.nick = nick
         self.name = name
         self.conn = connection
         self.realname = realname
+        self.hostname = hostname
         self.channels = []
         self.init_channels = init_channels
 
@@ -129,11 +129,19 @@ def interactive():
     p.add_argument('--nick', help='specify different nickname to use', default='pbjbt')
     p.add_argument('--name', help='specify different name to use', default='pbjbt')
     p.add_argument('--real-name', help='specify different realname to use', default='pbjbt')
+    p.add_argument('--hostname', help='specify different hostname to use', default=socket.gethostname())
     p.add_argument('-c', '--channel', help='channel the bot will join upon connection to the IRC network', type=str)
     args = p.parse_args()
     init_channels = args.channel if args.channel is None else [args.channel] # TODO: Remove hack once multiple init_channels support
     with IRCConnection(args.network, args.port) as c:
-        bot = IRCBot(nick=args.nick, name=args.name, realname=args.real_name, connection=c, init_channels=init_channels)
+        bot = IRCBot(
+                nick=args.nick,
+                name=args.name,
+                realname=args.real_name,
+                connection=c,
+                hostname=args.hostname,
+                init_channels=init_channels
+        )
         bot.run()
 
 if __name__ == '__main__':
