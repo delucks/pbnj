@@ -25,6 +25,15 @@ IRC bot we're writing from scratch for fun.
 | ------- | ------ | --------------------- |
 | .join {channel} | Join a channel | Both |
 | .log {channel} | Turn on logging for a channel | Both |
+| .weather {zip code} | Curl some weather API for weather info | Both |
+| {word}++/-- | Increment/decrement a counter for a username or word | Channel |
+| s/{regex}/{regex}/ | Apply a regex to the last message a user sent | Both |
+| .ping {hostname} | Ping, and display statistics, to host. (needs rate limiting) | Channel |
+| .search {-engine google} {search term} | perform a search and send back the top n results | Private |
+| .calculate {expr} | Calculate some simple arithmetic expression and return the results | Both |
+| .history {query} | Grep log for the query string | Both, if logging is enabled |
+
+Use markov-chain based keyword recognition to respond to direct mentions in channels.
 
 ## Possible Pronunciations
 

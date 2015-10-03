@@ -157,7 +157,7 @@ class IRCBot:
             return wrapped
         return command_decorator
 
-    @addCommand('^.join', 'pass')
+    @addCommand('^\.join', 'pass')
     def handle_join(self, msg_object, channels):
         if len(channels) < 1:
             self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
@@ -165,12 +165,12 @@ class IRCBot:
         chans = channelize(channels)
         self.join(chans)
 
-    @addCommand('^.version', 'none')
+    @addCommand('^\.version', 'none')
     def handle_version(self, msg_object):
         nick = self.split_hostmask(msg_object['hostmask'])['nick']
         self.conn.message(msg_object['dest'], '{2}: {0} version {1}'.format(self.nick, VERSION, nick))
 
-    @addCommand('^.ping', 'none')
+    @addCommand('^\.ping', 'none')
     def handle_ping(self, msg_object):
         nick = self.split_hostmask(msg_object['hostmask'])['nick']
         self.conn.message(msg_object['dest'], '{0}: pong'.format(nick))
