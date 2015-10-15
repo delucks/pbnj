@@ -73,6 +73,7 @@ class IRCBot:
         self.hostname = hostname
         self.channels = []
         self.init_channels = init_channels
+        self.votes = {} # TODO some kind of session persistence
 
     ''' joins a bunch of channels
     '''
@@ -119,6 +120,7 @@ class IRCBot:
         self.handle_version(msg_object)
         self.handle_join(msg_object)
         self.handle_ping(msg_object)
+        self.handle_plusplus(msg_object)
  
     ''' Decorator to match a regular expression against messages
     then modify the arguments to the decorated function to pull out different properties
@@ -156,6 +158,18 @@ class IRCBot:
                 func(*newargs)
             return wrapped
         return command_decorator
+
+    @addCommand('^([a-zA-Z0-9]+)(\+\+|--)', 'group')
+    def handle_plusplus(self, msg_object, match_groups):
+        return_votes = lambda x: 'voted {0} (+{1} / -{2})'.format(x[0]-x[1], x[0], x[1])
+        some_str = match_groups[0]
+        oper = match_groups
+        if some_str in self.votes:
+            idx = 0 if match_groups[1] == '++' else 1
+            self.votes[some_str][idx] += 1
+        else:
+            self.votes[some_str] = [1,0] if match_groups[1] == '++' else [0,1]
+        self.conn.message(msg_object['dest'], '{0}: {1}'.format(some_str, return_votes(self.votes[some_str])))
 
     @addCommand('^\.join', 'pass')
     def handle_join(self, msg_object, channels):
