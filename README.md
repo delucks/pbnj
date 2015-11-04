@@ -51,23 +51,45 @@ The message object that's passed off to those functions is actually a dict. It's
 
 *Input string:* ":nick!username@hostname.net PRIVMSG #channel :message context"
 ```json
-{"realname": "username", "dest": "#channel", "nick": "nick", "host": "hostname.net", "raw_msg": "nick!~username@hostname.net PRIVMSG #channel :message context", "message": "message context", "type": "PRIVMSG"}
+{
+  "host": "hostname.net",
+  "type": "PRIVMSG"
+  "dest": "#channel",
+  "nick": "nick",
+  "realname": "username",
+  "message": "message context",
+  "raw_msg": "nick!~username@hostname.net PRIVMSG #channel :message context",
+}
 ```
 
 *Input string:* ":hostmask QUIT :Quit:WeeChat 0.4.2"
 ```json
-{"host": "hostmask", "raw_msg": "hostmask QUIT :Quit:WeeChat 0.4.2", "type": "QUIT"}
+{
+  "host": "hostmask",
+  "type": "QUIT"
+  "raw_msg": "hostmask QUIT :Quit:WeeChat 0.4.2",
+}
 ```
 
 *Input string:* ":fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0"
 ```json
-{"host": "fqdn-of-server.com", "raw_msg": "fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0", "type": 2}
+{
+  "host": "fqdn-of-server.com",
+  "type": 2
+  "raw_msg": "fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0",
+}
 ```
 
 *Input string:* ":fqdn-of-server.com PING nick"
 ```json
-{"host": "fqdn-of-server.com", "raw_msg": "fqdn-of-server.com PING nick", "type": "PING"}
+{
+  "host": "fqdn-of-server.com",
+  "type": "PING"
+  "raw_msg": "fqdn-of-server.com PING nick",
+}
 ```
+
+As you can see, all of them have the 'host' and 'type' fields. Usually the messages which are useful to us are type PRIVMSG, as they're coming to us from users in channels or private messages. More fields are added so you can properly respond to the user.
 
 ## Command Ideas
 
