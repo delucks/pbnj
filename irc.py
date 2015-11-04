@@ -73,6 +73,7 @@ class IRCBot:
         self.hostname = hostname
         self.channels = []
         self.init_channels = init_channels
+        self.max_msg_len = 300
         self.votes = {} # TODO some kind of session persistence
 
     ''' joins a bunch of channels
@@ -95,21 +96,53 @@ class IRCBot:
         return {
                 'nick': g[0],
                 'realname': g[1],
-                'ip': g[2]
+                'host': g[2], # making this the same as the msg parsing tree
         }
 
     ''' Parse the message into a convenient dictionary
     TODO? direct log this as JSON
+    Samples of strings coming in we may see
+        :nick!username@hostname.net JOIN :#channel
+        :nick!username@hostname.net PRIVMSG #channel :message context
+        :hostmask QUIT :Quit:WeeChat 0.4.2
+        :fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0
     '''
     def split_msg(self, message):
-        m = re.match('^(?:[:](\S+) )?(\S+)(?: (?!:)(.+?))?(?: [:](.+))?$', message)
-        g = m.groups()
-        return {
-                'hostmask': g[0],
-                'type': g[1],
-                'dest': g[2],
-                'message': g[3]
-        }
+        # TODO make this take an iterable and put everything in a for loop with a yield
+        # if we do this in everything it'd just pass the same object down the pipeline and gc them more efficiently
+        # TODO refactor this so that it doesn't use one failing regex and instead
+        # programatically breaks up the message. We need to handle stuff that's 
+        # strange from the bot's view, like server startup messages and such
+        # in a more graceful way
+        if message.startswith(':'):
+            message = message[1:] # we really don't need to parse leading : from old servers
+        sp = message.split()
+        host = sp[0]
+        info = {}
+        if not '@' in host:
+            # this is a server directly sending us something or pinging us
+            if host == 'PING':
+                m = ' '.join(sp[1:])
+                info['message'] = m[1:] if m.startswith(':') else m
+                msg_type = 'PING'
+            else:
+                info['host'] = host
+                code = sp[1]
+                msg_type = int(code) if code.isdigit() else code
+        else:
+            x = self.split_hostmask(host)
+            info.update(x)
+            msg_type = sp[1]
+        if msg_type == 'PRIVMSG':
+            # private messages start immediately, unlike other types of messages
+            destination = sp[2]
+            info['dest'] = destination
+            m = ' '.join(sp[3:])
+            info['message'] = m[1:] if m.startswith(':') else m
+        # handle all the numeric ones, maybe keep the header? or throw it out
+        info['raw_msg'] = message
+        info['type'] = msg_type
+        return info
 
     ''' takes a split message object and fires off a bunch of methods to handle it
     '''
@@ -135,13 +168,13 @@ class IRCBot:
         def command_decorator(func):
             def wrapped(*args):
                 msg_object = args[1]
-                message = msg_object['message']
                 '''
                 technically you could get at 'self' with args[0]
                 if that's the case you can call a self.register_command(... so that the regex is in a dict
                 '''
-                if not message: # commands only apply to private/public messages
+                if not msg_object['type'] == 'PRIVMSG': # commands only apply to private/public messages
                     return None
+                message = msg_object['message']
                 match = re.match(cmd_regex, message)
                 if not match:
                     logging.debug('{0} failed to match {1}'.format(func.__name__, message))
@@ -159,35 +192,45 @@ class IRCBot:
             return wrapped
         return command_decorator
 
-    @addCommand('^([a-zA-Z0-9]+)(\+\+|--)', 'group')
+    @addCommand('^([a-zA-Z0-9]+)(\+\+|--|\*\*)', 'group')
     def handle_plusplus(self, msg_object, match_groups):
         return_votes = lambda x: 'voted {0} (+{1} / -{2})'.format(x[0]-x[1], x[0], x[1])
         some_str = match_groups[0]
         oper = match_groups
         if some_str in self.votes:
-            idx = 0 if match_groups[1] == '++' else 1
-            self.votes[some_str][idx] += 1
+            if match_groups[1] == '**':
+                self.votes[some_str][0] = self.votes[some_str][0]*self.votes[some_str][0]
+            else:
+                idx = 0 if match_groups[1] == '++' else 1
+                self.votes[some_str][idx] += 1
         else:
             self.votes[some_str] = [1,0] if match_groups[1] == '++' else [0,1]
-        self.conn.message(msg_object['dest'], '{0}: {1}'.format(some_str, return_votes(self.votes[some_str])))
+        if len(str(self.votes[some_str][0])) > self.max_msg_len:
+            self.votes[some_str][0] = 0
+            self.conn.message(msg_object['dest'], 'You flew too close too the sun. Enthusiastic voting though!')
+        else:
+            self.conn.message(msg_object['dest'], '{0}: {1}'.format(some_str, return_votes(self.votes[some_str])))
 
     @addCommand('^\.join', 'pass')
     def handle_join(self, msg_object, channels):
-        if len(channels) < 1:
-            self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
-            return None
-        chans = channelize(channels)
-        self.join(chans)
+        if msg_object['type'] == 'PRIVMSG':
+            if len(channels) < 1:
+                self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
+                return None
+            chans = channelize(channels)
+            self.join(chans)
 
     @addCommand('^\.version', 'none')
     def handle_version(self, msg_object):
-        nick = self.split_hostmask(msg_object['hostmask'])['nick']
-        self.conn.message(msg_object['dest'], '{2}: {0} version {1}'.format(self.nick, VERSION, nick))
+        if msg_object['type'] == 'PRIVMSG':
+            nick = msg_object['nick']
+            self.conn.message(msg_object['dest'], '{2}: {0} version {1}'.format(self.nick, VERSION, nick))
 
     @addCommand('^\.ping', 'none')
     def handle_ping(self, msg_object):
-        nick = self.split_hostmask(msg_object['hostmask'])['nick']
-        self.conn.message(msg_object['dest'], '{0}: pong'.format(nick))
+        if msg_object['type'] == 'PRIVMSG':
+            nick = msg_object['nick']
+            self.conn.message(msg_object['dest'], '{0}: pong'.format(nick))
 
     ''' set up the bot, join initial channels, start the loop
     '''
