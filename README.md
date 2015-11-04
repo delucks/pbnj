@@ -19,6 +19,56 @@ IRC bot we're writing from scratch for fun.
 | IRCConnection | handle all direct operations with socket & expose a higher-level interface the bot can interact with | recv_forever(), message(), join(), part() |
 | IRCBot | handle all inbound message processing and user interaction | handle(), run() |
 
+## Adding a Command
+
+Add a method inside of class IRCBot and decorate it like so:
+
+```python
+@addCommand('^\.match-me', 'pass'):
+def match_me(self, msg_object, the_rest_of_the_tokens):
+  self.conn.message(msg_object['dest'], 'Whoa! I got ' + str(the_rest_of_the_tokens))
+```
+
+Then, put that into IRCBot.handle() like the rest of them (TODO make that easier)
+
+Now, whenever the bot sees a message in a channel or a private message staring with '.match-me', it'll pass the rest of the words off to the channel or user it came from.
+
+```
+delucks -> pbjbt: .match-me foo bar baz
+pbjbt -> delucks: Whoa! I got ('foo', 'bar', 'baz')
+```
+
+This is a pretty easy pattern, as the second arg to the function gets auto-magically replaced with the split up tokens like you specified in the generator. You can make simpler commands with 'none', check out the source for `handle_version()`
+
+### The Message "Object"
+
+The message object that's passed off to those functions is actually a dict. It's built by the `split_msg()` method inside of `IRCBot`. Different fields are available depending on the type of message. All the following examples are generated from that function.
+
+*Input string:* ":nick!username@hostname.net JOIN :#channel"
+```json
+{"nick": "nick", "host": "hostname.net", "raw_msg": "nick!~username@hostname.net JOIN :#channel", "type": "JOIN", "realname": "username"}
+```
+
+*Input string:* ":nick!username@hostname.net PRIVMSG #channel :message context"
+```json
+{"realname": "username", "dest": "#channel", "nick": "nick", "host": "hostname.net", "raw_msg": "nick!~username@hostname.net PRIVMSG #channel :message context", "message": "message context", "type": "PRIVMSG"}
+```
+
+*Input string:* ":hostmask QUIT :Quit:WeeChat 0.4.2"
+```json
+{"host": "hostmask", "raw_msg": "hostmask QUIT :Quit:WeeChat 0.4.2", "type": "QUIT"}
+```
+
+*Input string:* ":fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0"
+```json
+{"host": "fqdn-of-server.com", "raw_msg": "fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0", "type": 2}
+```
+
+*Input string:* ":fqdn-of-server.com PING nick"
+```json
+{"host": "fqdn-of-server.com", "raw_msg": "fqdn-of-server.com PING nick", "type": "PING"}
+```
+
 ## Command Ideas
 
 | Command | Action | Channel/Private/Both? |
@@ -40,44 +90,3 @@ Use markov-chain based keyword recognition to respond to direct mentions in chan
 * pubpuhjamabot
 * pib-jibt
 * peanut butter jelly bot
-
-## Future Design Plans
-
-Eventually, it'd be nice to have something where we could easily tack on command methods.
-Something like "if you see a message starting with '.foo', perform method bar() with all subsequent words as arguments'
-We can probably abstract this as a command registration system- keep a table of trigger regular expressions to callback methods
-If so, possible method signature-
-  .addCommand(cmd_regex, method_name, arg_handling)
-    method_name is the name of callback method
-    arg_handling is one of:
-      pass -> give list of all subsequent tokens as an arg to the method (default)
-      first -> give first token as arg, discard the rest
-      groups -> if there are match groups in the regex, pass all of the groups as args to the method
-      none -> discard everything, just call me please & thank you
-With this argument handling scheme, we can easily write flexible methods that handle the token list.
-
-
-We could even use decorators to call the callback method with code for checking the regex and parsing the arg handling scheme before calling it, to sort to the appropriate argument schemes
-
-^ I ended up doing that
-
-## Adding a Command
-
-Add a method inside of class IRCBot and decorate it like so:
-
-```python
-@addCommand('^\.match-me', 'pass'):
-def match_me(self, msg_object, the_rest_of_the_tokens):
-  self.conn.message(msg_object['dest'], 'Whoa! I got ' + str(the_rest_of_the_tokens))
-```
-
-Then, put that into IRCBot.handle() like the rest of them (TODO make that easier)
-
-Now, whenever the bot sees a message in a channel or a private message staring with '.match-me', it'll pass the rest of the words off to the channel or user it came from.
-
-```
-delucks -> pbjbt: .match-me foo bar baz
-pbjbt -> delucks: Whoa! I got ('foo', 'bar', 'baz')
-```
-
-This is a pretty easy pattern, as the second arg to the function gets auto-magically replaced with the split up tokens like you specified in the generator. You can make simpler commands with 'none', check out the source for `handle_version()`
