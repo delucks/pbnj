@@ -5,7 +5,7 @@ import re
 import time
 import argparse
 
-logging.basicConfig(format='%(asctime)s %(message)s', stream=sys.stderr, level=logging.INFO)
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 channelize = lambda x: ['#'+c if not c.startswith('#') else c for c in x]
 VERSION='0.01'
 
@@ -107,42 +107,37 @@ class IRCBot:
         :hostmask QUIT :Quit:WeeChat 0.4.2
         :fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0
     '''
-    def split_msg(self, message):
-        # TODO make this take an iterable and put everything in a for loop with a yield
-        # if we do this in everything it'd just pass the same object down the pipeline and gc them more efficiently
-        # TODO refactor this so that it doesn't use one failing regex and instead
-        # programatically breaks up the message. We need to handle stuff that's 
-        # strange from the bot's view, like server startup messages and such
-        # in a more graceful way
-        if message.startswith(':'):
-            message = message[1:] # we really don't need to parse leading : from old servers
-        sp = message.split()
-        host = sp[0]
-        info = {}
-        if not '@' in host:
-            # this is a server directly sending us something or pinging us
-            if host == 'PING':
-                m = ' '.join(sp[1:])
-                info['message'] = m[1:] if m.startswith(':') else m
-                msg_type = 'PING'
+    def split_msg(self, msg_source):
+        for message in msg_source:
+            if message.startswith(':'):
+                message = message[1:] # we really don't need to parse leading : from old servers
+            sp = message.split()
+            host = sp[0]
+            info = {}
+            if not '@' in host:
+                # this is a server directly sending us something or pinging us
+                if host == 'PING':
+                    m = ' '.join(sp[1:])
+                    info['message'] = m[1:] if m.startswith(':') else m
+                    msg_type = 'PING'
+                else:
+                    info['host'] = host
+                    code = sp[1]
+                    msg_type = int(code) if code.isdigit() else code
             else:
-                info['host'] = host
-                code = sp[1]
-                msg_type = int(code) if code.isdigit() else code
-        else:
-            x = self.split_hostmask(host)
-            info.update(x)
-            msg_type = sp[1]
-        if msg_type == 'PRIVMSG':
-            # private messages start immediately, unlike other types of messages
-            destination = sp[2]
-            info['dest'] = destination
-            m = ' '.join(sp[3:])
-            info['message'] = m[1:] if m.startswith(':') else m
-        # handle all the numeric ones, maybe keep the header? or throw it out
-        info['raw_msg'] = message
-        info['type'] = msg_type
-        return info
+                x = self.split_hostmask(host)
+                info.update(x)
+                msg_type = sp[1]
+            if msg_type == 'PRIVMSG':
+                # private messages start immediately, unlike other types of messages
+                destination = sp[2]
+                info['dest'] = destination
+                m = ' '.join(sp[3:])
+                info['message'] = m[1:] if m.startswith(':') else m
+            # handle all the numeric ones, maybe keep the header? or throw it out
+            info['raw_msg'] = message
+            info['type'] = msg_type
+            yield info
 
     ''' takes a split message object and fires off a bunch of methods to handle it
     '''
@@ -217,8 +212,11 @@ class IRCBot:
             if len(channels) < 1:
                 self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
                 return None
+            logging.debug('We have channels! joining them.')
             chans = channelize(channels)
             self.join(chans)
+        else:
+            logging.debug('NOT A PRIVMSG DAMN')
 
     @addCommand('^\.version', 'none')
     def handle_version(self, msg_object):
@@ -239,8 +237,7 @@ class IRCBot:
         if self.init_channels is not None:
             logging.debug('IRCBot: Joining initial channels')
             self.join(self.init_channels)
-        for recv_irc_msg in self.conn.recv_forever():
-            split = self.split_msg(recv_irc_msg)
+        for split in self.split_msg(self.conn.recv_forever()):
             logging.debug('IRCBot: Calling handle() on {0}'.format(split))
             self.handle(split) # this is why handle shouldn't block
 
