@@ -7,7 +7,7 @@ import argparse
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 channelize = lambda x: ['#'+c if not c.startswith('#') else c for c in x]
-VERSION='0.01'
+VERSION='0.02'
 
 ''' sets up the bots connection on a socket level.
 exposes methods for closing, restarting, registering, and all the 
