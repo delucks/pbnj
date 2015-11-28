@@ -20,6 +20,7 @@ class IRCConnection:
         self.port = port
         self.conn.settimeout(timeout)
         self.conn.setblocking(1) # will block
+        self.log = [] # TODO: __getitem__?
     
     # set up the socket connection and be ready for sending data
     def __enter__(self):
@@ -159,7 +160,7 @@ class IRCBot:
         when called the method has access to non-static information like socket connection
     not bound to 'self' because decorator is compiled before objects are instantiated
     '''
-    def addCommand(cmd_regex, arg_handling):
+    def add_command(cmd_regex, arg_handling):
         def command_decorator(func):
             def wrapped(*args):
                 msg_object = args[1]
@@ -182,12 +183,12 @@ class IRCBot:
                     newargs = (args[0], args[1], message.split()[1:])
                 else: # none
                     newargs = args
-                logging.debug('addCommand[decorator context] calling {0} with {1}'.format(func.__name__, newargs))
+                logging.debug('add_command[decorator context] calling {0} with {1}'.format(func.__name__, newargs))
                 func(*newargs)
             return wrapped
         return command_decorator
 
-    @addCommand('^([a-zA-Z0-9]+)(\+\+|--|\*\*)', 'group')
+    @add_command('^([a-zA-Z0-9]+)(\+\+|--|\*\*)', 'group')
     def handle_plusplus(self, msg_object, match_groups):
         return_votes = lambda x: 'voted {0} (+{1} / -{2})'.format(x[0]-x[1], x[0], x[1])
         some_str = match_groups[0]
@@ -206,7 +207,7 @@ class IRCBot:
         else:
             self.conn.message(msg_object['dest'], '{0}: {1}'.format(some_str, return_votes(self.votes[some_str])))
 
-    @addCommand('^\.join', 'pass')
+    @add_command('^\.join', 'pass')
     def handle_join(self, msg_object, channels):
         if msg_object['type'] == 'PRIVMSG':
             if len(channels) < 1:
@@ -218,13 +219,13 @@ class IRCBot:
         else:
             logging.debug('NOT A PRIVMSG DAMN')
 
-    @addCommand('^\.version', 'none')
+    @add_command('^\.version', 'none')
     def handle_version(self, msg_object):
         if msg_object['type'] == 'PRIVMSG':
             nick = msg_object['nick']
             self.conn.message(msg_object['dest'], '{2}: {0} version {1}'.format(self.nick, VERSION, nick))
 
-    @addCommand('^\.ping', 'none')
+    @add_command('^\.ping', 'none')
     def handle_ping(self, msg_object):
         if msg_object['type'] == 'PRIVMSG':
             nick = msg_object['nick']
@@ -247,7 +248,7 @@ def interactive():
     p.add_argument('-p', '--port', help='specify different port for the connection', type=int, default=6667)
     p.add_argument('--nick', help='specify different nickname to use', default='pbjbt')
     p.add_argument('--name', help='specify different name to use', default='pbjbt')
-    p.add_argument('--real-name', help='specify different realname to use', default='pbjbt')
+    p.add_argument('--real-name', dest='realname', help='specify different realname to use', default='pbjbt')
     p.add_argument('--hostname', help='specify different hostname to use', default=socket.gethostname())
     p.add_argument('--debug', help='increase logging verbosity to DEBUG', action='store_true')
     p.add_argument('-c', '--channels', help='channels the bot will join upon connection to the IRC network', nargs='+')
@@ -260,7 +261,7 @@ def interactive():
         bot = IRCBot(
                 nick=args.nick,
                 name=args.name,
-                realname=args.real_name,
+                realname=args.realname,
                 connection=c,
                 hostname=args.hostname,
                 init_channels=args.channels
