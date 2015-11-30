@@ -14,13 +14,14 @@ exposes methods for closing, restarting, registering, and all the
 utility parts of the irc protocol
 '''
 class IRCConnection:
-    def __init__(self, addr, port, timeout=10.0):
+    def __init__(self, addr, port, timeout=10.0, recv_bufsz=4096):
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.addr = addr
         self.port = port
         self.conn.settimeout(timeout)
         self.conn.setblocking(1) # will block
         self.log = [] # TODO: __getitem__?
+        self.recv_bufsz = recv_bufsz
     
     # set up the socket connection and be ready for sending data
     def __enter__(self):
@@ -46,9 +47,9 @@ class IRCConnection:
     def message(self, channel, message):
         self.send('PRIVMSG {0} :{1}'.format(channel, message))
 
-    def recv_forever(self, recv_bufsz=4096):
+    def recv_forever(self):
         while True:
-            read = self.conn.recv(recv_bufsz)
+            read = self.conn.recv(self.recv_bufsz)
             # keep recieving until we get a \r\n
             while '\r\n' in read:
                 spl = read.split('\r\n', 1)
@@ -63,10 +64,17 @@ class IRCConnection:
         self.send('NICK {0}'.format(nick))
         self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))
 
-''' handles IRC interactions from a high level (user visible)
+''' handles IRC interactions from a higher level (common utility functions)
+this class should be subclassed in order to build a working bot that can do more
+than join channels
+PLANNING:
+    Maybe we could decorate this with something that decorates all methods starting with handle_ with our regex func
+    However it'd have to happen for any subclass too... can we have an @IRCBot decorator that just makes the class
+    a magic subclass of IRCBot... having access to all the utility functions, and autodecorating these things?
+    Then we could call that base class/decorator BaseIRCBot and inherit from it or whatever
 '''
-class IRCBot:
-    def __init__(self, nick, name, connection, hostname, realname=None, init_channels=None):
+class IRCBot(object):
+    def __init__(self, connection, nick, name, hostname, realname, init_channels):
         self.nick = nick
         self.name = name
         self.conn = connection
@@ -75,7 +83,6 @@ class IRCBot:
         self.channels = []
         self.init_channels = init_channels
         self.max_msg_len = 300
-        self.votes = {} # TODO some kind of session persistence
 
     ''' joins a bunch of channels
     '''
@@ -102,6 +109,7 @@ class IRCBot:
 
     ''' Parse the message into a convenient dictionary
     TODO? direct log this as JSON
+    Could we maybe use a namedtuple as data transport instead? Might be faster
     Samples of strings coming in we may see
         :nick!username@hostname.net JOIN :#channel
         :nick!username@hostname.net PRIVMSG #channel :message context
@@ -140,6 +148,34 @@ class IRCBot:
             info['type'] = msg_type
             yield info
 
+    ''' this method should be defined by the bot implementer
+    '''
+    def handle(self, msg_object):
+        raise NotImplementedError()
+
+    ''' set up the bot, join initial channels, start the loop
+    '''
+    def run(self):
+        self.conn.register(self.nick, self.name, self.realname)
+        if self.init_channels:
+            logging.debug('IRCBotBase: Joining initial channels')
+            self.join(self.init_channels)
+        for split in self.split_msg(self.conn.recv_forever()):
+            logging.debug('IRCBotBase: Calling handle() on {0}'.format(split))
+            self.handle(split) # this is why handle shouldn't block
+
+#class pbjbt(IRCBotBase):
+#    def __init__(self, connection, nick, name, hostname, realname=None, init_channels=None):
+#        self.votes = {} # TODO some kind of session persistence
+#        super(IRCBot, self).__init__(
+#                connection,
+#                nick = 'pbjbt',
+#                name = 'pbjbt',
+#                hostname,
+#                realname,
+#                init_channels
+#        )
+
     ''' takes a split message object and fires off a bunch of methods to handle it
     '''
     def handle(self, msg_object):
@@ -150,7 +186,7 @@ class IRCBot:
         self.handle_join(msg_object)
         self.handle_ping(msg_object)
         self.handle_plusplus(msg_object)
- 
+
     ''' Decorator to match a regular expression against messages
     then modify the arguments to the decorated function to pull out different properties
     of the message.
@@ -159,14 +195,27 @@ class IRCBot:
         the regex and handling stragegy get read by the macro and stay static
         when called the method has access to non-static information like socket connection
     not bound to 'self' because decorator is compiled before objects are instantiated
+    the ideal situation here is to calculate the theoretical string intersection of all the regexes
     '''
     def add_command(cmd_regex, arg_handling):
+        print('Inside add_command')
         def command_decorator(func):
+            print('Inside command_decorator context but not the wrapped func yet')
+            #self = args[0] # this is so hacky
+            #if cmd_regex in self.commands:
+            #    logging.fatal('Command regular expression registered twice! Offending regex and method: {0} {1}'.format(
+            #        cmd_regex, 
+            #    self.commands[cmd_regex] =
             def wrapped(*args):
                 msg_object = args[1]
                 '''
                 technically you could get at 'self' with args[0]
                 if that's the case you can call a self.register_command(... so that the regex is in a dict
+                but if you want to do that, you'd have to use a global and put the actual code to add the command
+                up inside the command_decorator context up there ^^
+                you can only get at self in runtime. so if we want to define commands at runtime they can't be in the decorator
+                this is why logging does not work inside the decorator
+                TODO: get rid of the "return None" here and instead have it return something more sane
                 '''
                 if not msg_object['type'] == 'PRIVMSG': # commands only apply to private/public messages
                     return None
@@ -187,6 +236,15 @@ class IRCBot:
                 func(*newargs)
             return wrapped
         return command_decorator
+
+    # something like this, then the class' handler gets each of the methods
+    #def add_command(cmd_regex, arg_handling):
+    #    def command_decorator(func):
+    #        func._cmd = True
+    #        func._cmd_regex = cmd_regex
+    #        func._arg_handling = arg_handling
+    #        return func
+    #    return command_decorator
 
     @add_command('^([a-zA-Z0-9]+)(\+\+|--|\*\*)', 'group')
     def handle_plusplus(self, msg_object, match_groups):
@@ -231,16 +289,15 @@ class IRCBot:
             nick = msg_object['nick']
             self.conn.message(msg_object['dest'], '{0}: pong'.format(nick))
 
-    ''' set up the bot, join initial channels, start the loop
-    '''
-    def run(self):
-        self.conn.register(self.nick, self.name, self.realname)
-        if self.init_channels is not None:
-            logging.debug('IRCBot: Joining initial channels')
-            self.join(self.init_channels)
-        for split in self.split_msg(self.conn.recv_forever()):
-            logging.debug('IRCBot: Calling handle() on {0}'.format(split))
-            self.handle(split) # this is why handle shouldn't block
+'''
+so we need some kind of a method that can decorate a subclass of IRCBot
+this decorator must target all methods decorated with the @command dummy deco
+command() will be defined in IRCBot with pass
+1. take original class, make a copy
+2. iter through class' methods
+3. check if @command
+4. if so, populate the self.commands dict with regex, group handling, and method signature
+'''
 
 def interactive():
     p = argparse.ArgumentParser(description='pbjbt')
@@ -259,10 +316,10 @@ def interactive():
         args.channels = channelize(args.channels)
     with IRCConnection(args.network, args.port) as c:
         bot = IRCBot(
+                connection=c,
                 nick=args.nick,
                 name=args.name,
                 realname=args.realname,
-                connection=c,
                 hostname=args.hostname,
                 init_channels=args.channels
         )
