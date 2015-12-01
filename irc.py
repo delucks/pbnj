@@ -19,7 +19,7 @@ Samples of strings coming in we may see
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 channelize = lambda x: ['#'+c if not c.startswith('#') else c for c in x]
 return_votes = lambda x: 'voted {0} (+{1}/-{2})'.format(x[0]-x[1], x[0], x[1])
-VERSION = '0.03'
+VERSION = '0.04'
 
 
 class IRCConnection(object):
@@ -271,9 +271,9 @@ class IRCBot(object):
                         '{0} failed to match {1}'.format(m_name, msg_object)
                     )
 
-    ''' Commands in common between every IRCBot subclass:
-    '''
     @bot_command('^\.join', 'pass')
+        ''' Commands in common between every IRCBot subclass:
+        '''
     def join_multi(self, msg_object, channels):
         if len(channels) < 1:
             self.conn.message(
