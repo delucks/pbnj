@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import socket
 import logging
 import sys
@@ -7,37 +9,48 @@ import argparse
 import inspect
 from collections import OrderedDict
 
+'''
+Samples of strings coming in we may see
+    :nick!username@hostname.net JOIN :#channel
+    :nick!username@hostname.net PRIVMSG #channel :message context
+    :hostmask QUIT :Quit:WeeChat 0.4.2
+    :fqdn.net 002 nick :Your host is irc.fqdn.net, running FooIRCd-0.1
+'''
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 channelize = lambda x: ['#'+c if not c.startswith('#') else c for c in x]
-VERSION='0.03'
+return_votes = lambda x: 'voted {0} (+{1}/-{2})'.format(x[0]-x[1], x[0], x[1])
+VERSION = '0.03'
 
 
-''' sets up the bots connection on a socket level.
-exposes methods for closing, restarting, registering, and all the 
-utility parts of the irc protocol
-'''
-class IRCConnection:
+class IRCConnection(object):
+    ''' sets up the bots connection on a socket level.
+    exposes methods for closing, restarting, registering, and all the
+    utility parts of the irc protocol
+    '''
     def __init__(self, addr, port, timeout=10.0, recv_bufsz=4096):
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.addr = addr
         self.port = port
         self.conn.settimeout(timeout)
-        self.conn.setblocking(1) # will block
-        self.log = [] # TODO: __getitem__?
+        self.conn.setblocking(1)  # will block
+        self.log = []  # TODO: __getitem__?
         self.recv_bufsz = recv_bufsz
-    
-    # set up the socket connection and be ready for sending data
-    def __enter__(self):
-        self.conn.connect((self.addr, self.port))
-        return self # TODO: check if this is an incorrect paradigm for __enter__s
 
-    # close down everything that needs to be closed
+    def __enter__(self):
+        ''' set up the socket connection and be ready for sending data
+        '''
+        self.conn.connect((self.addr, self.port))
+        return self
+
     def __exit__(self, type, value, traceback):
+        ''' close down everything that needs to be closed
+        '''
         self.send('QUIT :pbjbt/' + VERSION)
         self.conn.close()
 
-    # basic helper method to tack on a \r\n and log it
     def send(self, message):
+        ''' basic helper method to tack on a \r\n and log it
+        '''
         self.conn.send(message + '\r\n')
         logging.info('SEND ' + message)
 
@@ -53,7 +66,9 @@ class IRCConnection:
     def recv_forever(self):
         while True:
             read = self.conn.recv(self.recv_bufsz)
-            # keep recieving until we get a \r\n
+            # keep recieving until we get a \r\n, also strip out junk chars
+            if '\x01' in read:
+                read = read.replace('\x01', '')
             while '\r\n' in read:
                 spl = read.split('\r\n', 1)
                 # pop of all the text up to/including \r\n
@@ -67,46 +82,49 @@ class IRCConnection:
         self.send('NICK {0}'.format(nick))
         self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))
 
-''' Decorator to match a regular expression against messages
-then modify the arguments to the decorated function to pull out different properties
-of the message.
-This essentially makes each subsequent method a template for this macro-
-    the last argument will always be filled in by the macro
-    the regex and handling stragegy get read by the macro and stay static
-    when called the method has access to non-static information like socket connection
-The checks in the beginning which return False are for early termination of
-the method before we hit any expensive code paths (regex'ing the message)
-'''
+
 def wrap_command(func, cmd_regex, arg_handling):
+    ''' Decorator to match a regular expression against messages
+    then modify the arguments to the decorated function to pull out
+    different properties of the message.
+    The last argument will always be filled in by the macro
+    The regex and handling stragegy get read by the macro and stay static
+    The checks in the beginning which return False are for early termination of
+    the method before we hit any expensive code paths (regex'ing the message)
+    '''
     def wrapped(*args):
         msg_object = args[1]
-        #TODO: get rid of the "return None" here and instead have it return something more sane
-        if msg_object['type'] == 'PING':
+        # commands only apply to private/public messages and /me
+        if msg_object['type'] == 'PRIVMSG' or msg_object['type'] == 'ACTION':
+            message = msg_object['message']
+            match = re.match(cmd_regex, message)
+            if not match:
+                logging.debug('{0} failed to match {1}'.format(
+                    func.__name__, message)
+                )
+                return False
+            if arg_handling == 'group':
+                newargs = (args[0], args[1], match.groups())
+            elif arg_handling == 'first':
+                newargs = (args[0], args[1], message.split()[1])
+            elif arg_handling == 'pass':
+                newargs = (args[0], args[1], message.split()[1:])
+            else:  # none
+                newargs = args
+            logging.debug('wrap_command calling {0} with {1}'.format(
+                func.__name__, newargs)
+            )
+            func(*newargs)
+        else:
             return False
-        if not msg_object['type'] == 'PRIVMSG': # commands only apply to private/public messages
-            return False
-        message = msg_object['message']
-        match = re.match(cmd_regex, message)
-        if not match:
-            logging.debug('{0} failed to match {1}'.format(func.__name__, message))
-            return False
-        if arg_handling == 'group':
-            newargs = (args[0], args[1], match.groups())
-        elif arg_handling == 'first':
-            newargs = (args[0], args[1], message.split()[1])
-        elif arg_handling == 'pass':
-            newargs = (args[0], args[1], message.split()[1:])
-        else: # none
-            newargs = args
-        logging.debug('bot_command[decorator context] calling {0} with {1}'.format(func.__name__, newargs))
-        func(*newargs)
     return wrapped
 
-''' marks a method as a command within a subclass of IRCBot.
-It can then interact with incoming irc messages after the
-class is activated with @activebot()
-'''
+
 def bot_command(cmd_regex, arg_handling):
+    ''' marks a method as a command within a subclass of IRCBot.
+    It can then interact with incoming irc messages after the
+    class is activated with @activebot()
+    '''
     def command_decorator(func):
         func._cmd = True
         func._cmd_regex = cmd_regex
@@ -114,38 +132,45 @@ def bot_command(cmd_regex, arg_handling):
         return func
     return command_decorator
 
-''' marks a subclass of IRCBot as the active bot to use.
-Activates all of the @bot_command(...) commands by decorating
-them with wrap_command(...)
-'''
+
 def activebot():
+    ''' marks a subclass of IRCBot as the active bot to use.
+    Activates all of the @bot_command(...) commands by decorating
+    them with wrap_command(...)
+    '''
     def wrap_bot_class(bot_class):
-        for method_name, method in inspect.getmembers(bot_class, inspect.ismethod):
-            if '_cmd' in dir(method): # this is SO HACKY
+        for m_name, method in inspect.getmembers(bot_class, inspect.ismethod):
+            if '_cmd' in dir(method):  # this is SO HACKY
                 # this is a command method, and needs to be decorated
-                wrapped = wrap_command(method, method._cmd_regex, method._arg_handling)
-                bot_class.commands[method_name] = wrapped
+                wrapped = wrap_command(
+                    method, method._cmd_regex, method._arg_handling
+                )
+                bot_class.commands[m_name] = wrapped
                 # we're manually decorating because fuck you iteration
-                setattr(bot_class, method_name, wrapped)
+                setattr(bot_class, m_name, wrapped)
         return bot_class
     return wrap_bot_class
 
 
-''' handles IRC interactions from a higher level (common utility functions)
-Subclass this in order to build a working bot.
-'''
 class IRCBot(object):
+    ''' handles IRC interactions from a higher level (common utility functions)
+    Subclass this in order to build a working bot.
+    '''
     # this is in the class scope so it can be modified by activebot
     commands = OrderedDict()
-    # also- let's replace this with another class that can have more metadata about each command TODO
+    # replace this with another class that can have more
+    # metadata about each command TODO
 
     def __init__(self):
-        raise NotImplementedError('You must subclass IRCBot, then call create()')
+        raise NotImplementedError(
+            'You must subclass IRCBot, then call create()'
+        )
 
-    ''' initializes a subclass of IRCBot.
-    Done this way so you cannot directly initialize this class
-    '''
-    def create(self, connection, nick, name, hostname, realname, init_channels):
+    def create(self, connection, nick, name,
+               hostname, realname, init_channels):
+        ''' initializes a subclass of IRCBot.
+        Done this way so you cannot directly initialize this class
+        '''
         self.nick = nick
         self.name = name
         self.conn = connection
@@ -155,16 +180,16 @@ class IRCBot(object):
         self.init_channels = init_channels
         self.max_msg_len = 300
 
-    ''' joins a bunch of channels
-    '''
     def join(self, channels):
+        ''' joins a bunch of channels
+        '''
         for channel in channels:
             self.channels.append(channel)
             self.conn.join(channel)
 
-    ''' leaves a bunch of channels :(
-    '''
     def part(self, channels):
+        ''' leaves a bunch of channels :(
+        '''
         for channel in channels:
             self.channels.remove(channel)
             self.conn.part(channel)
@@ -173,24 +198,20 @@ class IRCBot(object):
         m = re.match('^([a-zA-Z0-9]+)!~([a-zA-Z0-9\ ]+)@(.*)', hostmask)
         g = m.groups()
         return {
-                'nick': g[0],
-                'realname': g[1],
-                'host': g[2], # making this the same as the msg parsing tree
+            'nick': g[0],
+            'realname': g[1],
+            'host': g[2],  # making this the same as the msg parsing tree
         }
 
     ''' Parse the message into a convenient dictionary
     TODO? direct log this as JSON
     Could we maybe use a namedtuple as data transport instead? Might be faster
-    Samples of strings coming in we may see
-        :nick!username@hostname.net JOIN :#channel
-        :nick!username@hostname.net PRIVMSG #channel :message context
-        :hostmask QUIT :Quit:WeeChat 0.4.2
-        :fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0
     '''
     def split_msg(self, msg_source):
         for message in msg_source:
             if message.startswith(':'):
-                message = message[1:] # we really don't need to parse leading : from old servers
+                # we really don't need to parse leading : from old servers
+                message = message[1:]
             sp = message.split()
             host = sp[0]
             info = {}
@@ -206,52 +227,60 @@ class IRCBot(object):
                     msg_type = int(code) if code.isdigit() else code
             else:
                 x = self.split_hostmask(host)
-                info.update(x)
+                info.update(x)  # merge the hostmask stuff back into 'info'
                 msg_type = sp[1]
             if msg_type == 'PRIVMSG':
-                # private messages start immediately, unlike other types of messages
                 destination = sp[2]
                 info['dest'] = destination
                 m = ' '.join(sp[3:])
-                info['message'] = m[1:] if m.startswith(':') else m
-            # handle all the numeric ones, maybe keep the header? or throw it out
+                msg = m[1:] if m.startswith(':') else m
+                if msg.startswith('ACTION'):
+                    msg_type = 'ACTION'
+                    msg = msg[7:]  # actions are privmsgs, why
+                info['message'] = msg
+            # TODO handle all the numeric ones
             info['raw_msg'] = message
             info['type'] = msg_type
             yield info
 
-    ''' set up the bot, join initial channels, start the loop
-    '''
     def run(self):
+        ''' set up the bot, join initial channels, start the loop
+        '''
         self.conn.register(self.nick, self.name, self.realname)
         if self.init_channels:
             logging.debug('IRCBotBase: Joining initial channels')
             self.join(self.init_channels)
         for split in self.split_msg(self.conn.recv_forever()):
             logging.debug('IRCBotBase: Calling handle() on {0}'.format(split))
-            self.handle(split) # this is why handle shouldn't block
+            self.handle(split)  # this is why handle shouldn't block
 
-    ''' takes a split message object and calls every command method
-    The command methods will early-terminate with False return status if not applicable
-    Make sure they do not block, this whole thing is single-threaded
-    '''
     def handle(self, msg_object):
-        # This is an example of how you would parse a field other than 'message' in this method b4 handlers
+        ''' takes a split message object and calls every command method
+        The command methods will early-terminate with False returned
+        if not applicable.
+        Make sure they do not block, this whole thing is single-threaded
+        '''
         if msg_object['type'] == 'PING':
             self.conn.send('PONG :' + msg_object['message'])
         else:
-            for method_name, method in self.commands.iteritems():
-                if method(self, msg_object): # the call
-                    logging.info('Called command method {0}'.format(method_name))
+            for m_name, method in self.commands.iteritems():
+                if method(self, msg_object):  # the call
+                    logging.info('Called command method {0}'.format(m_name))
                 else:
-                    logging.debug('{0} failed to match {1}'.format(method_name, msg_object))
+                    logging.debug(
+                        '{0} failed to match {1}'.format(m_name, msg_object)
+                    )
 
     ''' Commands in common between every IRCBot subclass:
     '''
     @bot_command('^\.join', 'pass')
     def join_multi(self, msg_object, channels):
         if len(channels) < 1:
-            self.conn.message(msg_object['dest'], 'Usage: .join #channelname')
-            return False # this now early terminates
+            self.conn.message(
+                msg_object['dest'],
+                'Usage: .join #channelname'
+            )
+            return False  # this now early terminates
         logging.debug('We have channels! joining them.')
         chans = channelize(channels)
         self.join(chans)
@@ -259,66 +288,97 @@ class IRCBot(object):
     @bot_command('^\.version', 'none')
     def version(self, msg_object):
         nick = msg_object['nick']
-        self.conn.message(msg_object['dest'], '{2}: {0} version {1}'.format(self.nick, VERSION, nick))
+        self.conn.message(
+            msg_object['dest'],
+            '{2}: {0} version {1}'.format(self.nick, VERSION, nick)
+        )
 
     @bot_command('^\.ping', 'none')
     def ping(self, msg_object):
         nick = msg_object['nick']
-        self.conn.message(msg_object['dest'], '{0}: pong'.format(nick))
+        self.conn.message(
+            msg_object['dest'],
+            '{0}: pong'.format(nick)
+        )
 
     @bot_command('^\.commands', 'none')
     def list_commands(self, msg_object):
         # TODO: use docstring of each method for its help text
         nick = msg_object['nick']
-        self.conn.message(msg_object['dest'], '{0}: {1}'.format(nick, ','.join(self.commands.keys())))
+        self.conn.message(
+            msg_object['dest'],
+            '{0}: {1}'.format(nick, ','.join(self.commands.keys()))
+        )
 
 
-''' pbjbt is a simple bot. it uses 'pbjbt' for
-all of its names, and only has the ability to modify
-the origin hostname
-'''
 @activebot()
 class pbjbt(IRCBot):
+    ''' pbjbt is a simple bot. it uses 'pbjbt' for
+    all of its names, and only has the ability to modify
+    the origin hostname
+    '''
     def __init__(self, connection, hostname, init_channels):
-        self.votes = {} # TODO some kind of session persistence
+        self.votes = {}  # TODO some kind of session persistence
         super(pbjbt, self).create(
-                connection,
-                self.__class__.__name__, # nick
-                self.__class__.__name__, # name
-                hostname,
-                self.__class__.__name__, # realname
-                init_channels
+            connection,
+            self.__class__.__name__,  # nick
+            self.__class__.__name__,  # name
+            hostname,
+            self.__class__.__name__,  # realname
+            init_channels
         )
+
+    @bot_command('shrug', 'none')
+    def shrug(self, msg_object):
+        if msg_object['type'] == 'ACTION':
+            self.conn.message(
+                msg_object['dest'],
+                '¯\_(ツ)_/¯'
+            )
 
     @bot_command('^([a-zA-Z0-9]+)(\+\+|--|\*\*)', 'group')
     def increment(self, msg_object, match_groups):
-        return_votes = lambda x: 'voted {0} (+{1} / -{2})'.format(x[0]-x[1], x[0], x[1])
-        some_str = match_groups[0]
+        topic = match_groups[0]
         oper = match_groups
-        if some_str in self.votes:
+        if topic in self.votes:
             if match_groups[1] == '**':
-                self.votes[some_str][0] = self.votes[some_str][0]*self.votes[some_str][0]
+                self.votes[topic][0] *= 2
             else:
                 idx = 0 if match_groups[1] == '++' else 1
-                self.votes[some_str][idx] += 1
+                self.votes[topic][idx] += 1
         else:
-            self.votes[some_str] = [1,0] if match_groups[1] == '++' else [0,1]
-        if len(str(self.votes[some_str][0])) > self.max_msg_len:
-            self.votes[some_str][0] = 0
-            self.conn.message(msg_object['dest'], 'You flew too close too the sun. Enthusiastic voting though!')
+            self.votes[topic] = [1, 0] if match_groups[1] == '++' else [0, 1]
+        if len(str(self.votes[topic][0])) > self.max_msg_len:
+            self.votes[topic][0] = 0
+            self.conn.message(
+                msg_object['dest'],
+                'You flew too close too the sun. Enthusiastic voting though!'
+            )
         else:
-            self.conn.message(msg_object['dest'], '{0}: {1}'.format(some_str, return_votes(self.votes[some_str])))
+            self.conn.message(
+                msg_object['dest'],
+                '{0}: {1}'.format(topic, return_votes(self.votes[topic]))
+            )
+
 
 def interactive():
     p = argparse.ArgumentParser(description='pbjbt')
-    p.add_argument('-n', '--network', help='FQDN of IRC network to connect to', default='127.0.0.1')
-    p.add_argument('-p', '--port', help='specify different port for the connection', type=int, default=6667)
-    p.add_argument('--nick', help='specify different nickname to use', default='pbjbt')
-    p.add_argument('--name', help='specify different name to use', default='pbjbt')
-    p.add_argument('--real-name', dest='realname', help='specify different realname to use', default='pbjbt')
-    p.add_argument('--hostname', help='specify different hostname to use', default=socket.gethostname())
-    p.add_argument('--debug', help='increase logging verbosity to DEBUG', action='store_true')
-    p.add_argument('-c', '--channels', help='channels the bot will join upon connection to the IRC network', nargs='+')
+    p.add_argument('-n', '--network', default='127.0.0.1',
+                   help='FQDN of IRC network to connect to')
+    p.add_argument('-p', '--port', type=int, default=6667,
+                   help='specify different port for the connection')
+    p.add_argument('--nick', default='pbjbt',
+                   help='specify different nickname to use')
+    p.add_argument('--name', default='pbjbt',
+                   help='specify different name to use')
+    p.add_argument('--real-name', dest='realname', default='pbjbt',
+                   help='specify different realname to use')
+    p.add_argument('--hostname', default=socket.gethostname(),
+                   help='specify different hostname to use')
+    p.add_argument('--debug', action='store_true',
+                   help='increase logging verbosity to DEBUG')
+    p.add_argument('-c', '--channels', nargs='+',
+                   help='channels the bot will join immediately')
     args = p.parse_args()
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -326,9 +386,9 @@ def interactive():
         args.channels = channelize(args.channels)
     with IRCConnection(args.network, args.port) as c:
         bot = pbjbt(
-                connection=c,
-                hostname=args.hostname,
-                init_channels=args.channels
+            connection=c,
+            hostname=args.hostname,
+            init_channels=args.channels
         )
         bot.run()
 
