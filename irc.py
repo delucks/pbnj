@@ -272,9 +272,9 @@ class IRCBot(object):
                     )
 
     @bot_command('^\.join', 'pass')
+    def join_multi(self, msg_object, channels):
         ''' Commands in common between every IRCBot subclass:
         '''
-    def join_multi(self, msg_object, channels):
         if len(channels) < 1:
             self.conn.message(
                 msg_object['dest'],
