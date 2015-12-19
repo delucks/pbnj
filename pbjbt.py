@@ -10,7 +10,7 @@ import argparse
 from irc.connection import IRCConnection
 from irc.utility import bot_command, active_bot
 from irc.bot import IRCBot
-VERSION = '0.04'
+VERSION = '0.05'
 
 '''
 Samples of strings coming in we may see
