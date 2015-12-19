@@ -39,6 +39,7 @@ def wrap_command(func, cmd_regex, arg_handling):
             func(*newargs)
         else:
             return False
+    wrapped.__doc__ = func.__doc__
     return wrapped
 
 
@@ -67,6 +68,7 @@ def active_bot():
                 wrapped = wrap_command(
                     method, method._cmd_regex, method._arg_handling
                 )
+                wrapped._cmd_regex = method._cmd_regex
                 bot_class.commands[m_name] = wrapped
                 # we're manually decorating because fuck you iteration
                 setattr(bot_class, m_name, wrapped)

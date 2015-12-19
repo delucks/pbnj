@@ -30,6 +30,22 @@ class IRCConnection(object):
         self.send('QUIT :{0}/{1}'.format(self.nick, self.version))
         self.conn.close()
 
+    def __call__(self):
+        ''' recieve from the socket, yield as a generator expression
+        '''
+        while True:
+            read = self.conn.recv(self.recv_bufsz)
+            # keep recieving until we get a \r\n, also strip out junk chars
+            if '\x01' in read:
+                read = read.replace('\x01', '')
+            while '\r\n' in read:
+                spl = read.split('\r\n', 1)
+                # pop of all the text up to/including \r\n
+                log.info('RECV ' + spl[0])
+                yield spl[0]
+                # reassign to the non-split portion
+                read = spl[1]
+
     def send(self, message):
         ''' basic helper method to tack on a \r\n and log it
         '''
@@ -45,20 +61,6 @@ class IRCConnection(object):
     def message(self, channel, message):
         self.send('PRIVMSG {0} :{1}'.format(channel, message))
 
-    def recv_forever(self):
-        while True:
-            read = self.conn.recv(self.recv_bufsz)
-            # keep recieving until we get a \r\n, also strip out junk chars
-            if '\x01' in read:
-                read = read.replace('\x01', '')
-            while '\r\n' in read:
-                spl = read.split('\r\n', 1)
-                # pop of all the text up to/including \r\n
-                log.info('RECV ' + spl[0])
-                yield spl[0]
-                # reassign to the non-split portion
-                read = spl[1]
-
     def register(self, user, nick, hostname, realname=None):
         realname = user if not realname else realname
         self.nick = nick
@@ -66,3 +68,5 @@ class IRCConnection(object):
         self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))
         log.info('Registered on network {0} with ({1}/{2}/{3})'.format(
             self.addr, user, realname, hostname))
+
+#def connection_thread(

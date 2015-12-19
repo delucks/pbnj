@@ -2,6 +2,8 @@
 
 IRC bot we're writing from scratch for fun.
 
+`vim -s session.vim`
+
 ## Resources
 
 * [IRC RFC 1459](https://tools.ietf.org/html/rfc1459)

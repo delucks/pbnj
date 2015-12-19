@@ -108,7 +108,7 @@ class IRCBot(object):
         if self.init_channels:
             log.debug('IRCBotBase: Joining initial channels')
             self.join(self.init_channels)
-        for split in self.split_msg(self.conn.recv_forever()):
+        for split in self.split_msg(self.conn()):
             log.debug('IRCBotBase: Calling handle() on {0}'.format(split))
             self.handle(split)  # this is why handle shouldn't block
 
@@ -131,7 +131,7 @@ class IRCBot(object):
 
     @bot_command('^\.join', 'pass')
     def join_multi(self, msg_object, channels):
-        ''' Commands in common between every IRCBot subclass:
+        ''' join a number of channels
         '''
         if len(channels) < 1:
             self.conn.message(
@@ -144,6 +144,8 @@ class IRCBot(object):
 
     @bot_command('^\.version', 'none')
     def version(self, msg_object):
+        ''' return bot version
+        '''
         nick = msg_object['nick']
         self.conn.message(
             msg_object['dest'],
@@ -152,19 +154,24 @@ class IRCBot(object):
 
     @bot_command('^\.ping', 'none')
     def ping(self, msg_object):
+        ''' return "pong"
+        '''
         nick = msg_object['nick']
         self.conn.message(
             msg_object['dest'],
             '{0}: pong'.format(nick)
         )
 
-    @bot_command('^\.commands', 'none')
+    @bot_command('^\.commands|^\.help', 'none')
     def list_commands(self, msg_object):
-        # TODO: use docstring of each method for its help text
+        ''' list all registered bot commands
+        '''
         nick = msg_object['nick']
-        self.conn.message(
-            msg_object['dest'],
-            '{0}: {1}'.format(nick, ','.join(self.commands.keys()))
-        )
-
-
+        for m_name, method in self.commands.iteritems():
+            name = method._cmd_regex or m_name
+            docstring = ':' + method.__doc__ if method.__doc__ else ''
+            log.debug('Sending {0} {1} for command list'.format(name, docstring))
+            self.conn.message(
+                msg_object['dest'],
+                '{0}: {1}{2}'.format(nick, name, docstring)
+            )

@@ -3,8 +3,6 @@
 import logging
 import socket
 import sys
-import re
-import time
 import argparse
 
 from irc.connection import IRCConnection
