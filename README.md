@@ -1,8 +1,8 @@
 # pbjbt
 
-IRC bot we're writing from scratch for fun.
+IRC bot I'm writing from scratch for fun.
 
-`vim -s session.vim`
+`vim -S`
 
 ## Resources
 
@@ -14,12 +14,6 @@ IRC bot we're writing from scratch for fun.
 * [Python Decorators I](http://www.artima.com/weblogs/viewpost.jsp?thread=240808)
 * [Python Decorators II](http://www.artima.com/weblogs/viewpost.jsp?thread=240845)
 
-## Class Layout & Architecture
-
-| Class | Description | Important Methods |
-| ----- | ----------- | ----------------- |
-| IRCConnection | handle all direct operations with socket & expose a higher-level interface the bot can interact with | recv_forever(), message(), join(), part() |
-| IRCBot | handle all inbound message processing and user interaction | handle(), run() |
 
 ## Adding a Command
 
