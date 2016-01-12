@@ -53,6 +53,7 @@ class IRCBot(object):
             self.conn.part(channel)
 
     def split_hostmask(self, hostmask):
+        # TODO remove dependence on regular expressions
         m = re.match('^([a-zA-Z0-9]+)!~([a-zA-Z0-9\ ]+)@(.*)', hostmask)
         g = m.groups()
         return {
@@ -74,15 +75,10 @@ class IRCBot(object):
             host = sp[0]
             info = {}
             if not '@' in host:
-                # this is a server directly sending us something or pinging us
-                if host == 'PING':
-                    m = ' '.join(sp[1:])
-                    info['message'] = m[1:] if m.startswith(':') else m
-                    msg_type = 'PING'
-                else:
-                    info['host'] = host
-                    code = sp[1]
-                    msg_type = int(code) if code.isdigit() else code
+                # this is a server directly sending us something
+                info['host'] = host
+                code = sp[1]
+                msg_type = int(code) if code.isdigit() else code
             else:
                 x = self.split_hostmask(host)
                 info.update(x)  # merge the hostmask stuff back into 'info'
@@ -118,16 +114,13 @@ class IRCBot(object):
         if not applicable.
         Make sure they do not block, this whole thing is single-threaded
         '''
-        if msg_object['type'] == 'PING':
-            self.conn.send('PONG :' + msg_object['message'])
-        else:
-            for m_name, method in self.commands.iteritems():
-                if method(self, msg_object):  # the call
-                    log.info('Called command method {0}'.format(m_name))
-                else:
-                    log.debug(
-                        '{0} failed to match {1}'.format(m_name, msg_object)
-                    )
+        for m_name, method in self.commands.iteritems():
+            if method(self, msg_object):  # the call
+                log.info('Called command method {0}'.format(m_name))
+            else:
+                log.debug(
+                    '{0} failed to match {1}'.format(m_name, msg_object)
+                )
 
     @bot_command('^\.join', 'pass')
     def join_multi(self, msg_object, channels):

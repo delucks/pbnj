@@ -42,7 +42,11 @@ class IRCConnection(object):
                 spl = read.split('\r\n', 1)
                 # pop of all the text up to/including \r\n
                 log.info('RECV ' + spl[0])
-                yield spl[0]
+                # handle PING/PONG at the connection
+                if spl[0].startswith('PING'):
+                    self.send('PONG' + spl[0][4:])
+                else:
+                    yield spl[0]
                 # reassign to the non-split portion
                 read = spl[1]
 
