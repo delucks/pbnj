@@ -104,7 +104,7 @@ class IRCBot(object):
         if self.init_channels:
             log.debug('IRCBotBase: Joining initial channels')
             self.join(self.init_channels)
-        for split in self.split_msg(self.conn()):
+        for split in self.split_msg(self.conn.recieve()):
             log.debug('IRCBotBase: Calling handle() on {0}'.format(split))
             self.handle(split)  # this is why handle shouldn't block
 

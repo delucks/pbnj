@@ -30,7 +30,7 @@ class IRCConnection(object):
         self.send('QUIT :{0}/{1}'.format(self.nick, self.version))
         self.conn.close()
 
-    def __call__(self):
+    def recieve(self):
         ''' recieve from the socket, yield as a generator expression
         '''
         while True:
@@ -72,5 +72,3 @@ class IRCConnection(object):
         self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))
         log.info('Registered on network {0} with ({1}/{2}/{3})'.format(
             self.addr, user, realname, hostname))
-
-#def connection_thread(

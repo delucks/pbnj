@@ -10,18 +10,6 @@ from irc.utility import bot_command, active_bot
 from irc.bot import IRCBot
 VERSION = '0.05'
 
-'''
-Samples of strings coming in we may see
-    :nick!username@hostname.net JOIN :#channel
-    :nick!username@hostname.net PRIVMSG #channel :message context
-    :hostmask QUIT :Quit:WeeChat 0.4.2
-    :fqdn.net 002 nick :Your host is irc.fqdn.net, running FooIRCd-0.1
-TODO:
-    Multiple IRCConnections per bot, maybe each threaded
-    Logging support for each channel, configurable on/off and only certain nicks or actions. Maybe in JSON
-    Have some kind of a watchlist of words that just alert, maybe send some kind of a message (email, sms) on keywords
-'''
-
 
 @active_bot()
 class pbjbt(IRCBot):
