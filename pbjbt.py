@@ -1,17 +1,15 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import logging
 import socket
 import sys
 import argparse
 
 from irc.connection import IRCConnection
-from irc.utility import bot_command, active_bot
+from irc.utility import bot_command
 from irc.bot import IRCBot
 VERSION = '0.05'
 
 
-@active_bot()
 class pbjbt(IRCBot):
     ''' pbjbt is a simple bot. it uses 'pbjbt' for
     all of its names, and only has the ability to modify

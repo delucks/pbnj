@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 import inspect
+import sys
 import re
 import logging
 log = logging.getLogger()
@@ -15,7 +15,9 @@ def wrap_command(func, cmd_regex, arg_handling):
     the method before we hit any expensive code paths (regex'ing the message)
     '''
     def wrapped(*args):
+        # we don't need to pass args[0] ever because it's already bound to 'self'
         msg_object = args[1]
+        log.debug('wrapped {1} with args {0}'.format(args, func.__name__))
         # commands only apply to private/public messages and /me
         if msg_object['type'] == 'PRIVMSG' or msg_object['type'] == 'ACTION':
             message = msg_object['message']
@@ -26,13 +28,14 @@ def wrap_command(func, cmd_regex, arg_handling):
                 )
                 return False
             if arg_handling == 'group':
-                newargs = (args[0], args[1], match.groups())
+                newargs = (args[1], match.groups())
             elif arg_handling == 'first':
-                newargs = (args[0], args[1], message.split()[1])
+                newargs = (args[1], message.split()[1])
             elif arg_handling == 'pass':
-                newargs = (args[0], args[1], message.split()[1:])
+                newargs = (args[1], message.split()[1:])
             else:  # none
-                newargs = args
+                log.debug('{0} uses none, so I am passing it {1}'.format(func.__name__, args))
+                newargs = args[1:]
             log.debug('wrap_command calling {0} with {1}'.format(
                 func.__name__, newargs)
             )
@@ -54,23 +57,3 @@ def bot_command(cmd_regex, arg_handling):
         func._arg_handling = arg_handling
         return func
     return command_decorator
-
-
-def active_bot():
-    ''' marks a subclass of IRCBot as the active bot to use.
-    Activates all of the @bot_command(...) commands by decorating
-    them with wrap_command(...)
-    '''
-    def wrap_bot_class(bot_class):
-        for m_name, method in inspect.getmembers(bot_class, inspect.ismethod):
-            if '_cmd' in dir(method):  # this is SO HACKY
-                # this is a command method, and needs to be decorated
-                wrapped = wrap_command(
-                    method, method._cmd_regex, method._arg_handling
-                )
-                wrapped._cmd_regex = method._cmd_regex
-                bot_class.commands[m_name] = wrapped
-                # we're manually decorating because fuck you iteration
-                setattr(bot_class, m_name, wrapped)
-        return bot_class
-    return wrap_bot_class

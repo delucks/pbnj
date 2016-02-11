@@ -1,12 +1,23 @@
 Samples of strings coming in we may see
-    :nick!username@hostname.net JOIN :#channel
-    :nick!username@hostname.net PRIVMSG #channel :message context
-    :hostmask QUIT :Quit:WeeChat 0.4.2
-    :fqdn.net 002 nick :Your host is irc.fqdn.net, running FooIRCd-0.1
-TODO:
-    Multiple IRCConnections per bot, maybe each threaded
-    Logging support for each channel, configurable on/off and only certain nicks or actions. Maybe in JSON
-    Have some kind of a watchlist of words that just alert, maybe send some kind of a message (email, sms) on keywords
+* :nick!username@hostname.net JOIN :#channel
+* :nick!username@hostname.net PRIVMSG #channel :message context
+* :hostmask QUIT :Quit:WeeChat 0.4.2
+* :fqdn.net 002 nick :Your host is irc.fqdn.net, running FooIRCd-0.1
+
+Ideas and TODO:
+* Multiple IRCConnections per bot, maybe each threaded
+* Logging support for each channel, configurable on/off and only certain nicks or actions. Maybe in JSON
+* Have some kind of a watchlist of words that just alert, maybe send some kind of a message (email, sms) on keywords
+* Change the second argument of the command decorator to default to "groups"
+*   You could also have a fairly sane default of "all of your groups get passed off if the regex matches"
+* I think the idea of providing a method name instead of a regex is also good.
+*   If the type of the first argument is 'str', make it a regex? If it's callable, call it?
+* Wrap the '.' in front of commands into its own thing, apply commands as after that.
+* You can also make it so messaging the bot directly 'bot: ping' works the same way as .ping
+* @bot.command could work differently than @bot.environmental which would be for things like 'foo++' said without reference to the bot or a particular command word
+
+Making a many/many relationship
+-------------------------------
 
 ok, how are we going to handle having multiple Connections per Bot
 We could have each Connection be some kind of independent object that each

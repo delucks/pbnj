@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import socket
 import logging
 log = logging.getLogger()
@@ -33,27 +32,28 @@ class IRCConnection(object):
     def recieve(self):
         ''' recieve from the socket, yield as a generator expression
         '''
+        linesep = b'\r\n'
+        format_msg = lambda x: (str(x[0], 'utf-8'), x[1])
         while True:
+            # keep recieving until we get a \r\n
             read = self.conn.recv(self.recv_bufsz)
-            # keep recieving until we get a \r\n, also strip out junk chars
-            if '\x01' in read:
-                read = read.replace('\x01', '')
-            while '\r\n' in read:
-                spl = read.split('\r\n', 1)
+            while linesep in read:
                 # pop of all the text up to/including \r\n
-                log.info('RECV ' + spl[0])
-                # handle PING/PONG at the connection
-                if spl[0].startswith('PING'):
-                    self.send('PONG' + spl[0][4:])
+                message, read = format_msg(read.split(linesep, 1))
+                if '\x01' in message:
+                    message = message.replace('\x01', '')
+                log.info('RECV {0}'.format(message))
+                # handle PING/PONG
+                if message.startswith('PING'):
+                    self.send('PONG' + message[4:])
                 else:
-                    yield spl[0]
-                # reassign to the non-split portion
-                read = spl[1]
+                    yield message
 
     def send(self, message):
-        ''' basic helper method to tack on a \r\n and log it
+        ''' helper method to convert the string,
+        tack on a \r\n and log it
         '''
-        self.conn.send(message + '\r\n')
+        self.conn.send(message.encode() + b'\r\n')
         log.info('SEND ' + message)
 
     def part(self, channel):
