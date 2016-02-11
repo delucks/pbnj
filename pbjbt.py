@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import logging
 import socket
 import sys
@@ -7,7 +7,7 @@ import argparse
 from irc.connection import IRCConnection
 from irc.utility import bot_command
 from irc.bot import IRCBot
-VERSION = '0.05'
+VERSION = '0.06'
 
 
 class pbjbt(IRCBot):
