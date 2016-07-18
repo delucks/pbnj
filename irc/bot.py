@@ -7,12 +7,13 @@ import logging
 log = logging.getLogger()
 
 
-class IRCBot(object):
+class IRCBot:
     ''' handles IRC interactions from a higher level (common utility functions)
     Subclass this in order to build a working bot.
     '''
 
     def __init__(self):
+        #TODO change this.
         raise NotImplementedError(
             'You must subclass IRCBot, then call create()'
         )

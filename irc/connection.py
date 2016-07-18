@@ -3,7 +3,7 @@ import logging
 log = logging.getLogger()
 
 
-class IRCConnection(object):
+class IRCConnection:
     ''' sets up the bots connection on a socket level.
     exposes methods for closing, restarting, registering, and all the
     utility parts of the irc protocol

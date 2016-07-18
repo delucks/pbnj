@@ -34,7 +34,10 @@ def wrap_command(func, cmd_regex, arg_handling):
             elif arg_handling == 'pass':
                 newargs = (args[1], message.split()[1:])
             else:  # none
-                log.debug('{0} uses none, so I am passing it {1}'.format(func.__name__, args))
+                log.debug(
+                    '{0} uses none, so I am passing it {1}'.format(
+                    func.__name__, args)
+                )
                 newargs = args[1:]
             log.debug('wrap_command calling {0} with {1}'.format(
                 func.__name__, newargs)
