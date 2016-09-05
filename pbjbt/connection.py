@@ -3,8 +3,8 @@ import logging
 log = logging.getLogger()
 
 
-class IRCConnection:
-    ''' sets up the bots connection on a socket level.
+class Connection:
+    '''sets up the bots connection on a socket level.
     exposes methods for closing, restarting, registering, and all the
     utility parts of the irc protocol
     '''
@@ -16,43 +16,51 @@ class IRCConnection:
         self.conn.settimeout(timeout)
         self.conn.setblocking(1)  # will block
         self.recv_bufsz = recv_bufsz
+        self.read = b''
+        self.linesep = b'\r\n'
+        self._connected = False
 
     def __enter__(self):
-        ''' set up the socket connection and be ready for sending data
-        '''
+        '''set up the socket connection and be ready for sending data'''
         self.conn.connect((self.addr, self.port))
+        self._connected = True
         return self
 
     def __exit__(self, type, value, traceback):
-        ''' close down everything that needs to be closed
-        '''
+        '''close down everything that needs to be closed'''
         self.send('QUIT :{0}/{1}'.format(self.nick, self.version))
+        self._connected = False
         self.conn.close()
 
-    def recieve(self):
-        ''' recieve from the socket, yield as a generator expression
-        '''
-        linesep = b'\r\n'
+    def _recv(self):
+        '''recieve only one line from the socket'''
+        while self.linesep not in self.read:
+            self.read += self.conn.recv(self.recv_bufsz)
         format_msg = lambda x: (str(x[0], 'utf-8'), x[1])
+        message, self.read = format_msg(self.read.split(self.linesep, 1))
+        if '\x01' in message:
+            message = message.replace('\x01', '')
+        log.info('RECV {0}'.format(message))
+        if 'Closing link' in message:  #TODO robustify
+            return None  # termination of loop
+        return message
+
+    def recieve(self):
+        '''turn recieving from the socket into a generator!'''
         while True:
-            # keep recieving until we get a \r\n
-            read = self.conn.recv(self.recv_bufsz)
-            while linesep in read:
-                # pop of all the text up to/including \r\n
-                message, read = format_msg(read.split(linesep, 1))
-                if '\x01' in message:
-                    message = message.replace('\x01', '')
-                log.info('RECV {0}'.format(message))
-                # handle PING/PONG
-                if message.startswith('PING'):
-                    self.send('PONG' + message[4:])
-                else:
-                    yield message
+            message = self._recv()
+            if not message:
+                log.info('Got back None, terminating the recv loop')
+                break
+            elif message.startswith('PING'):
+                log.debug('Replying with PONG...')
+                self.send('PONG' + message[4:])
+            else:
+                log.debug('Got back an actual message')
+                yield message
 
     def send(self, message):
-        ''' helper method to convert the string,
-        tack on a \r\n and log it
-        '''
+        '''helper method to convert the string, tack on a \r\n and log it'''
         self.conn.send(message.encode() + b'\r\n')
         log.info('SEND ' + message)
 
@@ -60,12 +68,16 @@ class IRCConnection:
         self.send('PART {0}'.format(channel))
 
     def join(self, channel):
-        self.send('JOIN {0}'.format(channel))
+        if self._connected:
+            self.send('JOIN {0}'.format(channel))
+        else:
+            log.debug('Someone tried to join a channel before starting')
 
     def message(self, channel, message):
         self.send('PRIVMSG {0} :{1}'.format(channel, message))
 
     def register(self, user, nick, hostname, realname=None):
+        '''send the needed info to the IRC server after connecting'''
         realname = user if not realname else realname
         self.nick = nick
         self.send('NICK {0}'.format(nick))

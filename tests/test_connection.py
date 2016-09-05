@@ -36,6 +36,7 @@ class FakeSocket:
         messages = []
         for line in self.text.splitlines():
             messages.append(_wrap(line))
+            #print(messages)
         self.messages = messages
     def settimeout(self, timeout):
         pass
@@ -48,10 +49,10 @@ class FakeSocket:
     def recv(self, bufsz):
         # TODO don't throw away bufsz and actually return that much of our corpus
         if self.messages:
-            curr_msg = self.messages.pop()
+            curr_msg = self.messages.pop(0)
+            #print(curr_msg)
         else:
             curr_msg = None
-        print(curr_msg)
         self.recieved.append(curr_msg)
         return curr_msg
 
@@ -87,7 +88,8 @@ def test_recv(registered_connection):
     inspired = _get_log('InspIRCd-2.0.log')
     fs._set_reply_text(inspired)
     gotten = []
-    for line in registered_connection.recieve():
-        print(line) # rgggghrrfazdsalskdfj TODO
+    for line in registered_connection._recieve_continuously():
+    #for line in registered_connection.recieve():
+        assert fs.recieved
         gotten.append(line)
     assert gotten

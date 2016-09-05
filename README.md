@@ -13,7 +13,7 @@ pbjbt is:
 
 ```python
 from pbjbt import Bot
-bot = Bot()  # named __name__ by default, in this case "weather.py"
+bot = Bot('forecaster')
 
 @bot.command('^\.weather')  # regular expression or callable accepted
 def weather(message):
@@ -29,12 +29,18 @@ if __name__ == '__main__':
     bot.run()
 ```
 
+The method you decorate with `@bot.command(...)` will reply to the channel that created the message if you return:
+- strings
+- a Generator via yield (all yielded strings will be sent to the channel)
+
+If you return a prepared pbjbt.Reply object, it will execute that. (Prepared replies are TODO)
+
 ## Requirements
 
 None! Using pbjbt is easy because we only use the standard library.
-```none
-(unless you want to run tests)
-```
+
+`(unless you want to run tests)`
+
 In which case, you need `pytest` and `pytest-cov`. There's a requirements.txt too!
 
 ## Hacking
@@ -52,6 +58,7 @@ py.test
 
 ### TODOs
 
+- Prepared Reply objects
 - Chat history functionality, and response generation with basic ML
 
 #### Built-in commands

@@ -1,180 +1,143 @@
-from irc.utility import bot_command, wrap_command
-
-from collections import OrderedDict
-import re
+from types import GeneratorType
 import inspect
 import logging
+from pbjbt.connection import Connection
+from pbjbt.models import Message, Command, _builtin_command
 log = logging.getLogger()
 
+VERSION='0.0.4'
 
-class IRCBot:
-    ''' handles IRC interactions from a higher level (common utility functions)
-    Subclass this in order to build a working bot.
-    '''
-
-    def __init__(self):
-        #TODO change this.
-        raise NotImplementedError(
-            'You must subclass IRCBot, then call create()'
-        )
-
-    def create(self, connection, nick, name,
-               hostname, realname, init_channels,
-               version='-1'):
-        ''' initializes a subclass of IRCBot.
-        Done this way so you cannot directly initialize this class
-        '''
+class Bot:
+    def __init__(self, nick, username=None, realname=None):
         self.nick = nick
-        self.name = name
-        self.conn = connection
-        self.realname = realname
-        self.hostname = hostname
+        self.username = username or nick
+        self.realname = realname or nick
         self.channels = []
-        self.init_channels = init_channels
-        self.version = version
         self.max_msg_len = 300
-        # replace this with another class that can have more
-        # metadata about each command TODO
-        self.commands = OrderedDict()
+        self.commands = []
+        self.conn = None
+
+    def _parse_args(self, override=False):
+        '''TODO: use argparse to give this Bot additional options from the CLI
+        should be called when __name__ == __main__'''
+        pass
+
+    def _is_connected(self):
+        return self.conn is not None
+
+    def _channelify(self, text_stream):
+        '''ensure an iterable of channels start with #'''
+        for ch_name in text_stream:
+            if ch_name.startswith('#'):
+                yield ch_name
+            else:
+                yield '#' + ch_name
+
+    def _messageify(self, text_stream):
+        '''turn the raw text coming off the socket into a stream of objects'''
+        for raw_message in text_stream:
+            yield Message(raw_message)
+
+    def connect(self, addr, port=6667):
+        self.conn = Connection(addr, port, VERSION)
+        return self.conn
+
+    def command(self, filterspec):
+        def real_decorator(function):
+            c = Command(filterspec, function)
+            self.commands.append(c)
+            def wrapper(*args):
+                return function(*args)
+            return wrapper
+        return real_decorator
 
     def join(self, channels):
-        ''' joins a bunch of channels
-        '''
-        channelize = lambda x: [c if c.startswith('#') else '#'+c for c in x]
-        for channel in channelize(channels):
+        '''joins a bunch of channels'''
+        for channel in self._channelify(channels):
             self.channels.append(channel)
             self.conn.join(channel)
 
     def part(self, channels):
-        ''' leaves a bunch of channels :(
-        '''
-        for channel in channels:
+        '''leaves a bunch of channels :( '''
+        for channel in self._channelify(channels):
             self.channels.remove(channel)
             self.conn.part(channel)
 
-    def split_hostmask(self, hostmask):
-        # TODO remove dependence on regular expressions
-        m = re.match('^([a-zA-Z0-9]+)!~([a-zA-Z0-9\ ]+)@(.*)', hostmask)
-        g = m.groups()
-        return {
-            'nick': g[0],
-            'realname': g[1],
-            'host': g[2],  # making this the same as the msg parsing tree
-        }
-
-    ''' Parse the message into a convenient dictionary
-    Could we maybe use a namedtuple as data transport instead? Might be faster
-    '''
-    def split_msg(self, msg_source):
-        for message in msg_source:
-            sp = message.split()
-            host = sp[0]
-            info = {}
-            if not '@' in host:
-                # this is a server directly sending us something
-                info['host'] = host
-                code = sp[1]
-                msg_type = int(code) if code.isdigit() else code
-            else:
-                host = host[1:] if host.startswith(':') else host
-                x = self.split_hostmask(host)
-                info.update(x)  # merge the hostmask stuff back into 'info'
-                msg_type = sp[1]
-            if msg_type == 'PRIVMSG':
-                destination = sp[2]
-                info['dest'] = destination
-                m = ' '.join(sp[3:])
-                msg = m[1:] if m.startswith(':') else m
-                if msg.startswith('ACTION'):
-                    msg_type = 'ACTION'
-                    msg = msg[7:]  # actions are privmsgs, why
-                info['message'] = msg
-            # TODO handle all the numeric ones
-            info['raw_msg'] = message
-            info['type'] = msg_type
-            yield info
-
     def run(self):
-        ''' set up the bot, join initial channels, start the loop
-        '''
+        '''set up and connect the bot, start looping!'''
+        # check for _builtin_command decorated commands, insert them
         for m_name, method in inspect.getmembers(self, inspect.ismethod):
-            logging.debug('Checking if method {0} is a command...'.format(m_name))
-            if '_cmd' in dir(method):  # this is SO HACKY
-                logging.debug('{0} is a command!'.format(m_name))
-                # this is a command method, and needs to be decorated
-                wrapped = wrap_command(
-                    method, method._cmd_regex, method._arg_handling
-                )
-                wrapped._cmd_regex = method._cmd_regex
-                self.commands[m_name] = wrapped
-                setattr(self, m_name, wrapped)
-        self.conn.register(self.nick, self.name, self.realname)
-        if self.init_channels:
-            log.debug('Joining initial channels')
-            self.join(self.init_channels)
-        for split in self.split_msg(self.conn.recieve()):
-            log.debug('Calling handle() on {0}'.format(split))
-            self.handle(split)  # this is why handle shouldn't block
+            log.debug('Checking if method {} is a builtin...'.format(m_name))
+            if '_command' in dir(method):
+                log.debug('{} is a command!'.format(m_name))
+                #self.commands.insert(0, Command(method._filterspec, method))
+                self.commands.append(Command(method._filterspec, method))
+            else:
+                log.debug('{} was not a command'.format(m_name))
+        # start the connection
+        with self.conn:
+            # make sure we're registered to the irc network
+            self.conn.register(self.username, self.nick, self.conn.addr, self.realname)
+            # handle any channels the user asked us to join
+            if self.channels:
+                for channel in self.channels:
+                    self.conn.join(channel)
+            for msg in self._messageify(self.conn.recieve()):
+                log.debug('Calling handle() on {0}'.format(msg))
+                self.handle(msg)
 
-    def handle(self, msg_object):
-        ''' takes a split message object and calls every command method
-        The command methods will early-terminate with False returned
-        if not applicable.
-        Make sure they do not block, this whole thing is single-threaded
+    def handle(self, message):
+        '''Iterates through the registered commands and attempts to find a
+        command which matches the incoming Message. Does this by calling
+        command.match() for each.
         '''
-        for m_name, method in self.commands.items():
-            logging.debug('Calling {0} with {1}'.format(m_name, msg_object))
-            if method(self, msg_object):  # the call
-                log.info('Called command method {0}'.format(m_name))
+        for command in self.commands:
+            log.debug('Checking command {}'.format(command.name))
+            if command.match(message):  # the call
+                log.info('{} matched!'.format(command.name))
+                resp = command(message)
+                log.info('Called command method {0}'.format(command.name))
+                if resp:
+                    log.info('Got a reply: {}'.format(resp))
+                    # we have something to hand back
+                    if type(resp) == str:
+                        log.info('Response is a string, sending...')
+                        self.conn.message(message.dest, resp)
+                    elif isinstance(resp, GeneratorType):
+                        log.info(
+                            'Response is a generator, giving back the contents'
+                        )
+                        for reply in resp:
+                            self.conn.message(message.dest, reply)
+                break  # don't check any more methods
             else:
                 log.debug(
-                    '{0} failed to match {1}'.format(m_name, msg_object)
+                    '{0} failed to match {1}'.format(command.name, message)
                 )
 
-    @bot_command('^\.join', 'pass')
-    def join_multi(self, msg_object, channels):
-        ''' join a number of channels
-        '''
-        if len(channels) < 1:
-            self.conn.message(
-                msg_object['dest'],
-                'Usage: .join #channelname'
-            )
-            return False  # this now early terminates
-        log.debug('We have channels! joining them.')
-        self.join(channels)
+    @_builtin_command('^\.version')
+    def version(self, message):
+        '''display the library version'''
+        return '{}: {} version {}'.format(message.nick, self.nick, VERSION)
 
-    @bot_command('^\.version', 'none')
-    def version(self, msg_object):
-        ''' return bot version
-        '''
-        nick = msg_object['nick']
-        self.conn.message(
-            msg_object['dest'],
-            '{2}: {0} version {1}'.format(self.nick, self.version, nick)
-        )
+    @_builtin_command('^\.ping')
+    def ping(self, message):
+        '''pong'''
+        return '{}: pong'.format(message.nick)
 
-    @bot_command('^\.ping', 'none')
-    def ping(self, msg_object):
-        ''' return "pong"
-        '''
-        nick = msg_object['nick']
-        self.conn.message(
-            msg_object['dest'],
-            '{0}: pong'.format(nick)
-        )
+    @_builtin_command('^\.join')
+    def join_multi(self, message):
+        '''join a number of channels'''
+        if len(message.args) < 1:
+            log.debug('Error for join_multi usage: not enough args')
+            return 'Usage: .join #channelname'
+        else:
+            log.debug('We got channels: {}'.format(message.args))
+            self.join(message.args)
 
-    @bot_command('^\.commands|^\.help', 'none')
-    def list_commands(self, msg_object):
-        ''' list all registered bot commands
-        '''
-        nick = msg_object['nick']
-        self.conn.send('{0}: help format "regex applied: output"'.format(nick))
-        for m_name, method in self.commands.items():
-            name = method._cmd_regex or m_name
-            docstring = ':' + method.__doc__ if method.__doc__ else ''
-            log.debug('Sending {0} {1} for command list'.format(name, docstring))
-            self.conn.message(
-                msg_object['dest'],
-                '{1} - {2}'.format(nick, name, docstring)
-            )
+    @_builtin_command('^\.help')
+    def help(self, message):
+        '''return name and description of all commands'''
+        for command in self.commands:
+            log.debug('Sending {} for command list'.format(command.name))
+            yield '{}: {} - {}'.format(message.nick, command.name, str(command))
