@@ -2,8 +2,8 @@
 *.swp
 .coverage
 .cache
+pip-selftest.json
 __pycache__
 bin/*
 lib/*
 include/*
-PLANNING.md
