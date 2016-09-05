@@ -4,6 +4,7 @@ import inspect
 import logging
 from pbjbt.connection import Connection
 from pbjbt.models import Message, Command, _builtin_command
+from pbjbt.logger import ColorFormatter
 log = logging.getLogger()
 
 VERSION='0.0.7'
@@ -34,9 +35,15 @@ class Bot:
                        help='specify different realname to use')
         p.add_argument('--debug', action='store_true',
                        help='increase logging verbosity to DEBUG')
+        p.add_argument('--no-color', action='store_true',
+                       help='disable coloration of logging output')
         args = p.parse_args()
         log_lvl = logging.DEBUG if args.debug else logging.INFO
-        logging.basicConfig(level=log_lvl)
+        color_formatter = ColorFormatter(color_enabled=not args.no_color)
+        sh = logging.StreamHandler()
+        sh.setFormatter(color_formatter)
+        log.addHandler(sh)
+        log.setLevel(log_lvl)
         if override:
             self.nick = args.nick
             self.username = args.username

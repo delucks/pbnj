@@ -56,7 +56,6 @@ class Connection:
                 log.debug('Replying with PONG...')
                 self.send('PONG' + message[4:])
             else:
-                log.debug('Got back an actual message')
                 yield message
 
     def send(self, message):
