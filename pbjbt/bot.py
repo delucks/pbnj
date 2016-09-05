@@ -1,13 +1,20 @@
-from types import GeneratorType
+import sys
 import argparse
 import inspect
 import logging
+from types import GeneratorType
+
 from pbjbt.connection import Connection
 from pbjbt.models import Message, Command, _builtin_command
 from pbjbt.logger import ColorFormatter
-log = logging.getLogger()
 
+log = logging.getLogger()
+color_formatter = ColorFormatter()
+sh = logging.StreamHandler()
+sh.setFormatter(color_formatter)
+log.addHandler(sh)
 VERSION='0.0.7'
+
 
 class Bot:
     def __init__(self, nick, username=None, realname=None):
@@ -19,7 +26,7 @@ class Bot:
         self.commands = []
         self.conn = None
 
-    def _parse_args(self, docstring=None, override=False):
+    def _parse_args(self, arguments=sys.argv[1:], docstring=None, override=False):
         '''use argparse to give this Bot additional options from the CLI
         should be called when __name__ == __main__'''
         p = argparse.ArgumentParser(description=docstring or self.nick)
@@ -39,12 +46,9 @@ class Bot:
                        help='specify different name to use')
         p.add_argument('--real-name', dest='realname', default=self.realname,
                        help='specify different realname to use')
-        args = p.parse_args()
+        args = p.parse_args(arguments)
         log_lvl = logging.DEBUG if args.debug else logging.WARNING if args.quiet else logging.INFO
-        color_formatter = ColorFormatter(color_enabled=not args.no_color)
-        sh = logging.StreamHandler()
-        sh.setFormatter(color_formatter)
-        log.addHandler(sh)
+        color_formatter.color_enabled=not args.no_color
         log.setLevel(log_lvl)
         if override:
             self.nick = args.nick
@@ -89,17 +93,17 @@ class Bot:
             c = Command(filterspec, function)
             self.commands.append(c)
             log.debug('Added to self.commands')
-            def wrapper(*args):
-                return function(*args)
-            return wrapper
+            return function
         log.debug('Exiting command() decorator')
         return real_decorator
 
     def join(self, channels):
         '''joins a bunch of channels'''
+        success = True
         for channel in self._channelify(channels):
             self.channels.append(channel)
-            self.conn.join(channel)
+            success = success and self.conn.join(channel)
+        return success
 
     def part(self, channels):
         '''leaves a bunch of channels :( '''
@@ -148,6 +152,9 @@ class Bot:
                             if not self.conn.message(message.dest, reply):
                                 success = False
                         return success
+                    elif isinstance(resp, bool):
+                        logging.debug('the function handed back a boolean, returning it')
+                        return resp
                     else:
                         log.warning('Got back a weird type from a command')
                         log.warning(resp)
@@ -157,7 +164,8 @@ class Bot:
                 log.debug(
                     '{0} failed to match {1}'.format(command.name, message)
                 )
-        return True  # couldn't find a match for the command at all, is ok.
+        log.debug('No matches found.')
+        return False  # couldn't find a match for the command at all
 
     @_builtin_command('^\.version')
     def version(self, message):
@@ -177,7 +185,7 @@ class Bot:
             return 'Usage: .join #channelname'
         else:
             log.debug('We got channels: {}'.format(message.args))
-            self.join(message.args)
+            return self.join(message.args)
 
     @_builtin_command('^\.help')
     def help(self, message):

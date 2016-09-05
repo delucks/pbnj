@@ -1,0 +1,21 @@
+:irc.example.net 001 foo :Welcome to the Internet Relay Network foo!~foo@localhost.localdomain
+:irc.example.net 002 foo :Your host is irc.example.net, running version ngircd-23 (x86_64/unknown/linux-gnu)
+:irc.example.net 003 foo :This server has been started Mon Sep 05 2016 at 01:02:13 (UTC)
+:irc.example.net 004 foo irc.example.net ngircd-23 abBcCFiIoqrRswx abehiIklmMnoOPqQrRstvVz
+:irc.example.net 005 foo RFC2812 IRCD=ngIRCd CHARSET=UTF-8 CASEMAPPING=ascii PREFIX=(qaohv)~&@%+ CHANTYPES=#&+ CHANMODES=beI,k,l,imMnOPQRstVz CHANLIMIT=#&+:10 :are supported on this server
+:irc.example.net 005 foo CHANNELLEN=50 NICKLEN=9 TOPICLEN=490 AWAYLEN=127 KICKLEN=400 MODES=5 MAXLIST=beI:50 EXCEPTS=e INVEX=I PENALTY :are supported on this server
+:irc.example.net 251 foo :There are 2 users and 0 services on 1 servers
+:irc.example.net 254 foo 3 :channels formed
+:irc.example.net 255 foo :I have 2 users, 0 services and 0 servers
+:irc.example.net 265 foo 2 2 :Current local users: 2, Max: 2
+:irc.example.net 266 foo 2 2 :Current global users: 2, Max: 2
+:irc.example.net 250 foo :Highest connection count: 3 (112 connections received)
+:irc.example.net 422 foo :MOTD file is missing
+:foo!~foo@localhost.localdomain JOIN :#channel
+:irc.example.net 353 foo = #channel :@foo
+:irc.example.net 366 foo #channel :End of NAMES list
+:delucks!~delucks@localhost.localdomain JOIN :#channel
+:delucks!~delucks@localhost.localdomain PRIVMSG #channel :hello
+:foo!~foo@localhost.localdomain PART #channel :
+:irc.example.net NOTICE foo :Connection statistics: client 0.1 kb, server 1.5 kb.
+ERROR :"foo"
