@@ -1,4 +1,5 @@
 from types import GeneratorType
+import argparse
 import inspect
 import logging
 from pbjbt.connection import Connection
@@ -17,10 +18,31 @@ class Bot:
         self.commands = []
         self.conn = None
 
-    def _parse_args(self, override=False):
-        '''TODO: use argparse to give this Bot additional options from the CLI
+    def _parse_args(self, docstring=None, override=False):
+        '''use argparse to give this Bot additional options from the CLI
         should be called when __name__ == __main__'''
-        pass
+        p = argparse.ArgumentParser(description=docstring or self.nick)
+        p.add_argument('-n', '--network', default='127.0.0.1',
+                       help='FQDN of IRC network to connect to')
+        p.add_argument('-p', '--port', type=int, default=6667,
+                       help='specify different port for the connection')
+        p.add_argument('--nick', default=self.nick,
+                       help='specify different nickname to use')
+        p.add_argument('--user-name', dest='username', default=self.username,
+                       help='specify different name to use')
+        p.add_argument('--real-name', dest='realname', default=self.realname,
+                       help='specify different realname to use')
+        p.add_argument('--debug', action='store_true',
+                       help='increase logging verbosity to DEBUG')
+        args = p.parse_args()
+        log_lvl = logging.DEBUG if args.debug else logging.INFO
+        logging.basicConfig(level=log_lvl)
+        if override:
+            self.nick = args.nick
+            self.username = args.username
+            self.realname = args.realname
+            self.connect(args.network, args.port)
+        return args
 
     def _is_connected(self):
         return self.conn is not None

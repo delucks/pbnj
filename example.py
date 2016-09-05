@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-import logging
-logging.basicConfig(level=logging.DEBUG)
+'''a simple example of the pbjbt library'''
 from pbjbt.bot import Bot
 
 bot = Bot('hello')
@@ -18,6 +17,6 @@ def shrug(message):
     return '{}: ¯\_(ツ)_/¯'.format(message.nick)
 
 if __name__ == '__main__':
-    bot.connect('localhost')
+    args = bot._parse_args(__doc__, override=True)
     bot.join(['#foobar'])
     bot.run()
