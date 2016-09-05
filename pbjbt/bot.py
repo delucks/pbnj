@@ -13,7 +13,7 @@ color_formatter = ColorFormatter()
 sh = logging.StreamHandler()
 sh.setFormatter(color_formatter)
 log.addHandler(sh)
-VERSION='0.0.7'
+VERSION='0.0.8'
 
 
 class Bot:

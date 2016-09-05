@@ -1,10 +1,10 @@
 # pbjbt
 
-pbjbt is an IRC bot micro-framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
+pbjbt is an python IRC bot library and framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
 
 pbjbt is:
-- Tested (heading toward 100% coverage)
-- Small (>500sloc without tests)
+- Tested (hovering around 100% code coverage)
+- Small (less than 500 lines of code without tests)
 - Portable (only requires the standard library)
 
 ## Demo!
@@ -75,6 +75,7 @@ py.test
 
 ### TODOs
 
+- SSL Support
 - Prepared Reply objects
 - Chat history functionality, and response generation with basic ML
 
