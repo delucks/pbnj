@@ -23,22 +23,24 @@ class Bot:
         '''use argparse to give this Bot additional options from the CLI
         should be called when __name__ == __main__'''
         p = argparse.ArgumentParser(description=docstring or self.nick)
-        p.add_argument('-n', '--network', default='127.0.0.1',
-                       help='FQDN of IRC network to connect to')
-        p.add_argument('-p', '--port', type=int, default=6667,
-                       help='specify different port for the connection')
-        p.add_argument('--nick', default=self.nick,
+        p.add_argument('-n', '--nick', default=self.nick,
                        help='specify different nickname to use')
+        p.add_argument('-d', '--debug', action='store_true',
+                       help='increase logging verbosity to DEBUG')
+        p.add_argument('-q', '--quiet', action='store_true',
+                       help='decrease logging verbosity to WARNING')
+        p.add_argument('-c', '--no-color', action='store_true',
+                       help='disable coloration of logging output')
+        p.add_argument('--network', default='127.0.0.1',
+                       help='FQDN of IRC network to connect to')
+        p.add_argument('--port', type=int, default=6667,
+                       help='specify different port for the connection')
         p.add_argument('--user-name', dest='username', default=self.username,
                        help='specify different name to use')
         p.add_argument('--real-name', dest='realname', default=self.realname,
                        help='specify different realname to use')
-        p.add_argument('--debug', action='store_true',
-                       help='increase logging verbosity to DEBUG')
-        p.add_argument('--no-color', action='store_true',
-                       help='disable coloration of logging output')
         args = p.parse_args()
-        log_lvl = logging.DEBUG if args.debug else logging.INFO
+        log_lvl = logging.DEBUG if args.debug else logging.WARNING if args.quiet else logging.INFO
         color_formatter = ColorFormatter(color_enabled=not args.no_color)
         sh = logging.StreamHandler()
         sh.setFormatter(color_formatter)
@@ -68,7 +70,8 @@ class Bot:
             yield Message(raw_message)
 
     def connect(self, addr, port=6667):
-        self.conn = Connection(addr, port, VERSION)
+        if not self._is_connected():
+            self.conn = Connection(addr, port, VERSION)
         return self.conn
 
     def command(self, filterspec):
@@ -95,24 +98,21 @@ class Bot:
     def run(self):
         '''set up and connect the bot, start looping!'''
         # check for _builtin_command decorated commands, insert them
+        log.debug('Checking methods for builtin commands')
         for m_name, method in inspect.getmembers(self, inspect.ismethod):
-            log.debug('Checking if method {} is a builtin...'.format(m_name))
             if '_command' in dir(method):
                 log.debug('{} is a command!'.format(m_name))
-                #self.commands.insert(0, Command(method._filterspec, method))
                 self.commands.append(Command(method._filterspec, method))
-            else:
-                log.debug('{} was not a command'.format(m_name))
         # start the connection
         with self.conn:
             # make sure we're registered to the irc network
             self.conn.register(self.username, self.nick, self.conn.addr, self.realname)
             # handle any channels the user asked us to join
             if self.channels:
+                logging.info('Joining initial channels')
                 for channel in self.channels:
                     self.conn.join(channel)
             for msg in self._messageify(self.conn.recieve()):
-                log.debug('Calling handle() on {0}'.format(msg))
                 self.handle(msg)
 
     def handle(self, message):
@@ -138,6 +138,9 @@ class Bot:
                         )
                         for reply in resp:
                             self.conn.message(message.dest, reply)
+                    else:
+                        logging.warning('Got back a weird type from a command')
+                        logging.warning(resp)
                 break  # don't check any more methods
             else:
                 log.debug(

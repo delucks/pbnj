@@ -29,6 +29,7 @@ class Connection:
     def __exit__(self, type, value, traceback):
         '''close down everything that needs to be closed'''
         self.send('QUIT :{0}/{1}'.format(self.nick, self.version))
+        log.warning('Closing socket and IRC connections')
         self._connected = False
         self.conn.close()
 
@@ -42,6 +43,7 @@ class Connection:
             message = message.replace('\x01', '')
         log.info('RECV {0}'.format(message))
         if 'Closing link' in message:  #TODO robustify
+            log.warning('Got a "Closing link" message back from server')
             return None  # termination of loop
         return message
 
@@ -50,7 +52,7 @@ class Connection:
         while True:
             message = self._recv()
             if not message:
-                log.info('Got back None, terminating the recv loop')
+                log.warning('Got back None, terminating the recv loop')
                 break
             elif message.startswith('PING'):
                 log.debug('Replying with PONG...')
@@ -70,7 +72,7 @@ class Connection:
         if self._connected:
             self.send('JOIN {0}'.format(channel))
         else:
-            log.debug('Someone tried to join a channel before starting')
+            log.error('Someone tried to join a channel before starting')
 
     def message(self, channel, message):
         self.send('PRIVMSG {0} :{1}'.format(channel, message))
