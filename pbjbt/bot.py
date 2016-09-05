@@ -97,7 +97,12 @@ class Bot:
         log.debug('Exiting command() decorator')
         return real_decorator
 
-    def join(self, channels):
+    def join(self, channel):
+        '''joins a channel'''
+        self.channels.append(channel)
+        return self.conn.join(channel)
+
+    def joinall(self, channels):
         '''joins a bunch of channels'''
         success = True
         for channel in self._channelify(channels):
@@ -142,15 +147,22 @@ class Bot:
                     # we have something to hand back
                     if type(resp) == str:
                         log.info('Response is a string, sending...')
-                        return self.conn.message(message.dest, resp)
+                        if '#' in message.dest:
+                            return self.conn.message(message.dest, resp)
+                        else:
+                            # this is a private message
+                            return self.conn.message(message.nick, resp)
                     elif isinstance(resp, GeneratorType):
                         log.info(
                             'Response is a generator, giving back the contents'
                         )
                         success = True
                         for reply in resp:
-                            if not self.conn.message(message.dest, reply):
-                                success = False
+                            if '#' in message.dest:
+                                success = success and self.conn.message(message.dest, reply)
+                            else:
+                                # this is a private message
+                                success = success and self.conn.message(message.nick, reply)
                         return success
                     elif isinstance(resp, bool):
                         logging.debug('the function handed back a boolean, returning it')
