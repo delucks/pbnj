@@ -18,8 +18,8 @@ class Colors:
     reset = esc + '[0m'
     level_map = {
         'WARNING': yellow,
-        'INFO': white,
-        'DEBUG': green,
+        'INFO': green,
+        'DEBUG': white,
         'CRITICAL': red,
         'ERROR': red
     }

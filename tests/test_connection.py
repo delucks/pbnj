@@ -1,6 +1,4 @@
 import pytest
-import socket
-import os
 from pbjbt.connection import Connection
 from tests.common import _wrap, _get_log
 from tests.common import *
@@ -18,15 +16,17 @@ def test_register(mocked_connection):
 def test_send(registered_connection):
     fs = registered_connection.conn
     message = 'oh jeez rick'
-    registered_connection.send(message)
+    assert registered_connection.send(message)
     assert _wrap(message) in fs.sent
 
 def test_message(registered_connection):
     fs = registered_connection.conn
     message = 'oh jeez rick'
-    registered_connection.send(message)
-    registered_connection.message(CHANNEL, message)
+    assert registered_connection.send(message)
+    assert registered_connection.message(CHANNEL, message)
     assert _wrap('PRIVMSG {} :{}'.format(CHANNEL, message)) in fs.sent
+    registered_connection.conn = None
+    assert not registered_connection.send(message)
 
 def test_recv(registered_connection):
     fs = registered_connection.conn
@@ -52,11 +52,11 @@ def test_ping(registered_connection):
 
 def test_join_part(registered_connection):
     fs = registered_connection.conn
-    registered_connection.join(CHANNEL)
+    assert not registered_connection.join(CHANNEL)
     with registered_connection:
-        registered_connection.join(CHANNEL)
+        assert registered_connection.join(CHANNEL)
         assert _wrap('JOIN {}'.format(CHANNEL)) in fs.sent
-        registered_connection.part(CHANNEL)
+        assert registered_connection.part(CHANNEL)
         assert _wrap('PART {}'.format(CHANNEL)) in fs.sent
 
 def test_recieve(registered_connection):

@@ -7,10 +7,8 @@ USER foo bar baz :source-ip-of-connection.isp.com
 :irc.foo.bar.baz 002 foo :Your host is irc.foo.bar.baz, running version InspIRCd-2.0
 :irc.foo.bar.baz 003 foo :This server was created 11:10:25 Sep 12 2015
 :irc.foo.bar.baz 004 foo irc.foo.bar.baz InspIRCd-2.0 BIRdiorsw FKMOPRabefghijklmnopqrstvz Fabefghjkloqv
-:irc.foo.bar.baz 005 foo AWAYLEN=200 CASEMAPPING=rfc1459 CHANMODES=abegq,k,Ffjl,KMOPRimnprstz CHANNELLEN=64 CHANTYPES=# CHARSET=ascii ELIST=MU EXCEPTS=e EXTB
-AN=,ORUz FNC KICKLEN=255 MAP MAXBANS=60 :are supported by this server
-:irc.foo.bar.baz 005 foo MAXCHANNELS=20 MAXPARA=32 MAXTARGETS=20 MODES=20 NAMESX NETWORK=foobarIRC NICKLEN=32 OVERRIDE PREFIX=(ohv)@%+ SSL=[::]:6697 STARTTLS S
-TATUSMSG=@%+ TOPICLEN=307 :are supported by this server
+:irc.foo.bar.baz 005 foo AWAYLEN=200 CASEMAPPING=rfc1459 CHANMODES=abegq,k,Ffjl,KMOPRimnprstz CHANNELLEN=64 CHANTYPES=# CHARSET=ascii ELIST=MU EXCEPTS=e EXTBAN=,ORUz FNC KICKLEN=255 MAP MAXBANS=60 :are supported by this server
+:irc.foo.bar.baz 005 foo MAXCHANNELS=20 MAXPARA=32 MAXTARGETS=20 MODES=20 NAMESX NETWORK=foobarIRC NICKLEN=32 OVERRIDE PREFIX=(ohv)@%+ SSL=[::]:6697 STARTTLS STATUSMSG=@%+ TOPICLEN=307 :are supported by this server
 :irc.foo.bar.baz 005 foo VBANLIST WALLCHOPS WALLVOICES :are supported by this server
 :irc.foo.bar.baz 042 foo 779AAACWF :your unique ID
 :irc.foo.bar.baz 375 foo :irc.foo.bar.baz message of the day

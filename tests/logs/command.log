@@ -1,0 +1,5 @@
+:irc.foo.bar.baz 353 foo = #defaultchannel :a bunch of nicks
+:foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.help
+:foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.ping
+:foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.version
+:Closing link: (foo@source-ip-of-connection.isp.com) [Quit:foo\r\n]

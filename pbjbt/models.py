@@ -2,6 +2,12 @@ import re
 import logging
 log = logging.getLogger()
 
+attr_filter = lambda x: {
+    a: getattr(x, a)
+    for a in dir(x)
+    if not '__' in a and
+    not callable(getattr(x,a))
+}
 
 class Message:
     '''object to get passed between Bot class and its command methods. Separates
@@ -11,10 +17,21 @@ class Message:
         self.raw_msg = raw_msg
         self.message = None
         self.parse()
+
     def __str__(self):
         return self.message or self.raw_msg
+
     def __repr__(self):
         return self.raw_msg
+
+    def __eq__(self, other):
+        self_attr = attr_filter(self)
+        other_attr = attr_filter(other)
+        for item, val in self_attr.items():
+            if val != getattr(other, item):
+                return False
+        return True
+
     def parse(self):
         ''' Parse the message
         TODO handle all the numeric ones
@@ -22,22 +39,31 @@ class Message:
         '''
         sp = self.raw_msg.split()
         host = sp[0]
-        if not '@' in host:
-            # this is a server directly sending us something
-            self.host = host
-            code = sp[1]
-            self.type = int(code) if code.isdigit() else code
-        else:
+        if '@' in host:
             hostmask = host[1:] if host.startswith(':') else host
             re_matches = re.match(
-                '^([a-zA-Z0-9]+)!~([a-zA-Z0-9\ ]+)@(.*)',
+                '^([a-zA-Z0-9]+)!~?([a-zA-Z0-9\ ]+)@(.*)',
                 hostmask
             )
-            re_groups = re_matches.groups()
-            self.nick = re_groups[0]
-            self.realname = re_groups[1]
-            self.host = re_groups[2]
+            try:
+                re_groups = re_matches.groups()
+                self.nick = re_groups[0]
+                self.realname = re_groups[1]
+                self.host = re_groups[2]
+            except Exception as e:
+                log.error('The regex fucked up! On this input for the hostmask')
+                log.error(hostmask)
+                raise
             self.type = sp[1]
+        else:
+            # this is a server directly sending us something
+            self.host = host
+            try:
+                code = sp[1]
+            except:
+                print(sp)
+                raise
+            self.type = int(code) if code.isdigit() else code
         if self.type == 'PRIVMSG':
             self.dest = sp[2]
             m = ' '.join(sp[3:])
@@ -77,8 +103,17 @@ class Command:
         self.__doc__ = callback.__doc__
     def __str__(self):
         return self.__doc__ or 'This triggers it: {}'.format(self.filterspec)
+    def __repr__(self):
+        return self.name
     def __call__(self, *args):
         return self.callback(*args)
+    def __eq__(self, other):
+        return (
+            self.filterspec == other.filterspec and
+            self.callback == other.callback and
+            self.name == other.name and
+            self.__doc__ == other.__doc__
+        )
     def match(self, message):
         if callable(self.filterspec):
             return self.filterspec(message)

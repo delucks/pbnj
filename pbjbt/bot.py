@@ -69,6 +69,15 @@ class Bot:
         for raw_message in text_stream:
             yield Message(raw_message)
 
+    def _activate_commands(self):
+        '''check for _builtin_command decorated commands, insert them'''
+        log.debug('Checking methods for builtin commands')
+        for m_name, method in inspect.getmembers(self, inspect.ismethod):
+            if '_command' in dir(method):
+                log.debug('{} is a command!'.format(m_name))
+                self.commands.append(Command(method._filterspec, method))
+        log.debug(str(self.commands))
+
     def connect(self, addr, port=6667):
         if not self._is_connected():
             self.conn = Connection(addr, port, VERSION)
@@ -76,11 +85,14 @@ class Bot:
 
     def command(self, filterspec):
         def real_decorator(function):
+            log.debug('Creating command for function {}'.format(function))
             c = Command(filterspec, function)
             self.commands.append(c)
+            log.debug('Added to self.commands')
             def wrapper(*args):
                 return function(*args)
             return wrapper
+        log.debug('Exiting command() decorator')
         return real_decorator
 
     def join(self, channels):
@@ -97,19 +109,14 @@ class Bot:
 
     def run(self):
         '''set up and connect the bot, start looping!'''
-        # check for _builtin_command decorated commands, insert them
-        log.debug('Checking methods for builtin commands')
-        for m_name, method in inspect.getmembers(self, inspect.ismethod):
-            if '_command' in dir(method):
-                log.debug('{} is a command!'.format(m_name))
-                self.commands.append(Command(method._filterspec, method))
+        self._activate_commands()
         # start the connection
         with self.conn:
             # make sure we're registered to the irc network
             self.conn.register(self.username, self.nick, self.conn.addr, self.realname)
             # handle any channels the user asked us to join
             if self.channels:
-                logging.info('Joining initial channels')
+                log.info('Joining initial channels')
                 for channel in self.channels:
                     self.conn.join(channel)
             for msg in self._messageify(self.conn.recieve()):
@@ -131,21 +138,26 @@ class Bot:
                     # we have something to hand back
                     if type(resp) == str:
                         log.info('Response is a string, sending...')
-                        self.conn.message(message.dest, resp)
+                        return self.conn.message(message.dest, resp)
                     elif isinstance(resp, GeneratorType):
                         log.info(
                             'Response is a generator, giving back the contents'
                         )
+                        success = True
                         for reply in resp:
-                            self.conn.message(message.dest, reply)
+                            if not self.conn.message(message.dest, reply):
+                                success = False
+                        return success
                     else:
-                        logging.warning('Got back a weird type from a command')
-                        logging.warning(resp)
+                        log.warning('Got back a weird type from a command')
+                        log.warning(resp)
+                        return False
                 break  # don't check any more methods
             else:
                 log.debug(
                     '{0} failed to match {1}'.format(command.name, message)
                 )
+        return True  # couldn't find a match for the command at all, is ok.
 
     @_builtin_command('^\.version')
     def version(self, message):

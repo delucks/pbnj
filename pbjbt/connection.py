@@ -5,8 +5,8 @@ log = logging.getLogger()
 
 class Connection:
     '''sets up the bots connection on a socket level.
-    exposes methods for closing, restarting, registering, and all the
-    utility parts of the irc protocol
+    The only *magic* this class does is respond to PING messages with PONG
+    messages, which I see as an essential part of maintaining a Connection
     '''
     def __init__(self, addr, port, version='-1', timeout=10.0, recv_bufsz=4096):
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,26 +63,32 @@ class Connection:
 
     def send(self, message):
         '''helper method to convert the string, tack on a \r\n and log it'''
-        self.conn.send(message.encode() + b'\r\n')
-        log.info('SEND ' + message)
+        try:
+            self.conn.send(message.encode() + b'\r\n')
+            log.info('SEND ' + message)
+            return True
+        except Exception as e:
+            log.error('Hit an exception while trying to send {}'.format(message))
+            return False
 
     def part(self, channel):
-        self.send('PART {}'.format(channel))
+        return self.send('PART {}'.format(channel))
 
     def join(self, channel):
         if self._connected:
-            self.send('JOIN {}'.format(channel))
+            return self.send('JOIN {}'.format(channel))
         else:
             log.error('Someone tried to join a channel before starting')
+            return False
 
     def message(self, channel, message):
-        self.send('PRIVMSG {0} :{1}'.format(channel, message))
+        return self.send('PRIVMSG {0} :{1}'.format(channel, message))
 
     def register(self, user, nick, hostname, realname=None):
         '''send the needed info to the IRC server after connecting'''
         realname = user if not realname else realname
         self.nick = nick
-        self.send('NICK {0}'.format(nick))
-        self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))
-        log.info('Registered on network {0} with ({1}/{2}/{3})'.format(
+        log.info('Registering on network {0} with ({1}/{2}/{3})'.format(
             self.addr, user, realname, hostname))
+        n = self.send('NICK {0}'.format(nick))
+        return n and self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))

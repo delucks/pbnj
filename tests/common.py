@@ -1,9 +1,12 @@
 NICK = 'foo'
 CHANNEL = '#foo'
+MALFORMED_CHANNELS = ['foo', '#bar', 'baz']
 USER = 'bar'
 REALNAME = 'baz'
 HOSTNAME = 'localhost'
+RANDOM_TEST_RUNS = 100
 PORT = 6667
+import os
 
 
 class FakeSocket:
@@ -45,7 +48,6 @@ def _wrap(message):
     return bytes('{}\r\n'.format(message).encode('utf-8'))
 
 def _get_log(logname):
-    import os
     pwd = os.path.dirname(os.path.realpath(__file__))
     logs_dir = os.path.join(pwd, 'logs/')
     log_path = os.path.join(logs_dir, logname)
