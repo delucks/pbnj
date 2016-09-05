@@ -28,7 +28,7 @@ class Message:
         self_attr = attr_filter(self)
         other_attr = attr_filter(other)
         for item, val in self_attr.items():
-            if val != getattr(other, item):
+            if val != getattr(other, item, None):
                 return False
         return True
 
@@ -58,11 +58,7 @@ class Message:
         else:
             # this is a server directly sending us something
             self.host = host
-            try:
-                code = sp[1]
-            except:
-                print(sp)
-                raise
+            code = sp[1]
             self.type = int(code) if code.isdigit() else code
         if self.type == 'PRIVMSG':
             self.dest = sp[2]
@@ -122,3 +118,4 @@ class Command:
             if message.type == 'PRIVMSG':
                 log.debug('Trying to match {} with {}'.format(message.message, self.filterspec))
                 return re.match(self.filterspec, message.message)
+            return False

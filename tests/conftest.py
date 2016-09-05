@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch
 from pbjbt.connection import Connection
 from pbjbt.bot import Bot
+from pbjbt.models import Message
 from tests.common import _wrap, _get_log
 from tests.common import *
 
@@ -38,3 +39,8 @@ def command_bot(connected_bot):
     inspired = _get_log('command.log')
     fs._set_reply_text(inspired)
     return connected_bot
+
+@pytest.fixture
+def privmsg():
+    priv = ':delucks!~delucks@localhost.localdomain PRIVMSG #channel :hello'
+    return Message(priv)
