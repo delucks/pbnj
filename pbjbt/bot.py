@@ -5,7 +5,7 @@ from pbjbt.connection import Connection
 from pbjbt.models import Message, Command, _builtin_command
 log = logging.getLogger()
 
-VERSION='0.0.4'
+VERSION='0.0.7'
 
 class Bot:
     def __init__(self, nick, username=None, realname=None):
