@@ -1,110 +1,80 @@
 # pbjbt
 
-IRC bot I'm writing from scratch for fun.
+pbjbt is an IRC bot micro-framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
+
+pbjbt is:
+- Tested (heading toward 100% coverage)
+- Small (>500sloc without tests)
+- Portable (only requires the standard library)
+
+## Demo!
+
+`weather.py`
+
+```python
+from pbjbt import Bot
+bot = Bot()  # named __name__ by default, in this case "weather.py"
+
+@bot.command('^\.weather')  # regular expression or callable accepted
+def weather(message):
+    '''get the weather for a zip code in the US'''
+    # the commands' __doc__ are used in the bot's built-in ".help" command
+    zip_code = message.args[0]
+    response = requests.get('http://my.weather.com/api/{0}'.format(zip_code))
+    # will be sent back to the source channel by default
+    return '{0}: Currently {r.temp} degrees F'.format(message.nick, r=response.json())
+
+if __name__ == '__main__':
+    bot.connect('irc.network.com')
+    bot.run()
+```
+
+## Requirements
+
+None! Using pbjbt is easy because we only use the standard library.
+```none
+(unless you want to run tests)
+```
+In which case, you need `pytest` and `pytest-cov`. There's a requirements.txt too!
+
+## Hacking
 
 `vim -S`
 
-## Resources
+### Running the Tests
 
-* [IRC RFC 1459](https://tools.ietf.org/html/rfc1459)
-* [IRC RFC 2812](https://tools.ietf.org/html/rfc2812)
-* [Wikipedia List of IRC commands](https://en.wikipedia.org/wiki/List_of_Internet_Relay_Chat_commands)
-* [O'Reilly IRC bot example](http://archive.oreilly.com/pub/h/1968)
-* [Poorly formatted internet resource](http://www.devshed.com/c/a/Python/Python-and-IRC/)
-* [Python Decorators I](http://www.artima.com/weblogs/viewpost.jsp?thread=240808)
-* [Python Decorators II](http://www.artima.com/weblogs/viewpost.jsp?thread=240845)
-
-
-## Adding a Command
-
-Add a method inside of class IRCBot and decorate it like so:
-
-```python
-@addCommand('^\.match-me', 'pass'):
-def match_me(self, msg_object, the_rest_of_the_tokens):
-  self.conn.message(msg_object['dest'], 'Whoa! I got ' + str(the_rest_of_the_tokens))
+```shell
+virtualenv -p $(which python3) .
+source bin/activate
+pip install -r requirements.txt
+py.test
 ```
 
-Then, put that into IRCBot.handle() like the rest of them (TODO make that easier)
+### TODOs
 
-Now, whenever the bot sees a message in a channel or a private message staring with '.match-me', it'll pass the rest of the words off to the channel or user it came from.
+Large:
+- Chat history functionality, and response generation with basic ML
 
-```
-delucks -> pbjbt: .match-me foo bar baz
-pbjbt -> delucks: Whoa! I got ('foo', 'bar', 'baz')
-```
-
-This is a pretty easy pattern, as the second arg to the function gets auto-magically replaced with the split up tokens like you specified in the generator. You can make simpler commands with 'none', check out the source for `handle_version()`
-
-### The Message "Object"
-
-The message object that's passed off to those functions is actually a dict. It's built by the `split_msg()` method inside of `IRCBot`. Different fields are available depending on the type of message. All the following examples are generated from that function.
-
-*Input string:* ":nick!username@hostname.net JOIN :#channel"
-```json
-{"nick": "nick", "host": "hostname.net", "raw_msg": "nick!~username@hostname.net JOIN :#channel", "type": "JOIN", "realname": "username"}
-```
-
-*Input string:* ":nick!username@hostname.net PRIVMSG #channel :message context"
-```json
-{
-  "host": "hostname.net",
-  "type": "PRIVMSG"
-  "dest": "#channel",
-  "nick": "nick",
-  "realname": "username",
-  "message": "message context",
-  "raw_msg": "nick!~username@hostname.net PRIVMSG #channel :message context",
-}
-```
-
-*Input string:* ":hostmask QUIT :Quit:WeeChat 0.4.2"
-```json
-{
-  "host": "hostmask",
-  "type": "QUIT"
-  "raw_msg": "hostmask QUIT :Quit:WeeChat 0.4.2",
-}
-```
-
-*Input string:* ":fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0"
-```json
-{
-  "host": "fqdn-of-server.com",
-  "type": 2
-  "raw_msg": "fqdn-of-server.com 002 nick :Your host is irc.foo.bar.edu, running version InspIRCd-2.0",
-}
-```
-
-*Input string:* ":fqdn-of-server.com PING nick"
-```json
-{
-  "host": "fqdn-of-server.com",
-  "type": "PING"
-  "raw_msg": "fqdn-of-server.com PING nick",
-}
-```
-
-As you can see, all of them have the 'host' and 'type' fields. Usually the messages which are useful to us are type PRIVMSG, as they're coming to us from users in channels or private messages. More fields are added so you can properly respond to the user.
-
-## Command Ideas
-
+Built-in commands:
 | Command | Action | Channel/Private/Both? |
 | ------- | ------ | --------------------- |
 | .join {channel} | Join a channel | Both |
 | .log {channel} | Turn on logging for a channel | Both |
+| .calculate {expr} | Calculate some simple arithmetic expression and return the results | Both |
+| .history {query} | Grep log for the query string | Both, if logging is enabled |
+
+Extra commands (example?):
+| Command | Action | Channel/Private/Both? |
+| ------- | ------ | --------------------- |
 | .weather {zip code} | Curl some weather API for weather info | Both |
 | {word}++/-- | Increment/decrement a counter for a username or word | Channel |
 | s/{regex}/{regex}/ | Apply a regex to the last message a user sent | Both |
 | .ping {hostname} | Ping, and display statistics, to host. (needs rate limiting) | Channel |
 | .search {-engine google} {search term} | perform a search and send back the top n results | Private |
-| .calculate {expr} | Calculate some simple arithmetic expression and return the results | Both |
-| .history {query} | Grep log for the query string | Both, if logging is enabled |
 
-Use markov-chain based keyword recognition to respond to direct mentions in channels.
+## Name?
 
-## Possible Pronunciations
-
-* pubpuhjamabot
-* pib-jibt
-* peanut butter jelly bot
+Yeah I know it's weird. Initially I just called this "bot", but as it grew it
+requried a name, so I called it "peanut-butter-jelly bot" as it should be as easy
+to create an IRC bot with this library as it is to create a PB&J sammich.
+Inspired by the terseness of the IRC protocol, I shortened it to "pbjbt".
