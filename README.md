@@ -52,10 +52,10 @@ py.test
 
 ### TODOs
 
-Large:
 - Chat history functionality, and response generation with basic ML
 
-Built-in commands:
+#### Built-in commands
+
 | Command | Action | Channel/Private/Both? |
 | ------- | ------ | --------------------- |
 | .join {channel} | Join a channel | Both |
@@ -63,7 +63,8 @@ Built-in commands:
 | .calculate {expr} | Calculate some simple arithmetic expression and return the results | Both |
 | .history {query} | Grep log for the query string | Both, if logging is enabled |
 
-Extra commands (example?):
+#### Extra commands (example?):
+
 | Command | Action | Channel/Private/Both? |
 | ------- | ------ | --------------------- |
 | .weather {zip code} | Curl some weather API for weather info | Both |
