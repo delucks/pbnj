@@ -43,6 +43,23 @@ None! Using pbjbt is easy because we only use the standard library.
 
 In which case, you need `pytest` and `pytest-cov`. There's a requirements.txt too!
 
+## Message objects
+
+pbjbt hands you a Message object as the only argument to your command functions. This is a message from an IRC channel
+or server the bot is a part of, and has a number of fields filled out that you can work with.
+
+Normal fields:
+- `raw_msg`: Message as recieved off the socket
+- `host`: Hostname the message came from
+- `type`: IRC command the message represents. If this is PRIVMSG or ACTION, additional fields are parsed.
+
+PRIVMSG/ACTION fields:
+- `dest`: channel the message came from
+- `nick`: nick of the user the message came from
+- `realname`: realname of the user the message came from
+- `message`: trimmed message from the channel
+- `args`: array of everything but the first word in "message"
+
 ## Hacking
 
 `vim -S`

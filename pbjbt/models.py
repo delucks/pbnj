@@ -85,5 +85,5 @@ class Command:
         else:
             '''we only support the naive regex format for privmsg types'''
             if message.type == 'PRIVMSG':
-                logging.debug('Trying to match {} with {}'.format(message.message, self.filterspec))
+                log.debug('Trying to match {} with {}'.format(message.message, self.filterspec))
                 return re.match(self.filterspec, message.message)

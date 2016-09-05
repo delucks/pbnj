@@ -2,7 +2,7 @@ import pytest
 import socket
 import os
 from unittest.mock import patch
-from pbjbt.connection import IRCConnection
+from pbjbt.connection import Connection
 
 NICK = 'foo'
 USER = 'bar'
@@ -59,7 +59,7 @@ class FakeSocket:
 @pytest.fixture
 def mocked_connection():
     with patch('socket.socket', FakeSocket):
-        c = IRCConnection(HOSTNAME, PORT)
+        c = Connection(HOSTNAME, PORT)
         return c
 
 @pytest.fixture
@@ -88,7 +88,7 @@ def test_recv(registered_connection):
     inspired = _get_log('InspIRCd-2.0.log')
     fs._set_reply_text(inspired)
     gotten = []
-    for line in registered_connection._recieve_continuously():
+    for line in registered_connection.recieve():
     #for line in registered_connection.recieve():
         assert fs.recieved
         gotten.append(line)
