@@ -18,5 +18,4 @@ def shrug(message):
 
 if __name__ == '__main__':
     args = bot._parse_args(docstring=__doc__, override=True)
-    bot.join(['#foobar'])
     bot.run()

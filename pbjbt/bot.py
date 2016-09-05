@@ -42,6 +42,8 @@ class Bot:
                        help='FQDN of IRC network to connect to')
         p.add_argument('--port', type=int, default=6667,
                        help='specify different port for the connection')
+        p.add_argument('--channels',
+                       help='comma-separated channels to connect to when joining')
         p.add_argument('--user-name', dest='username', default=self.username,
                        help='specify different name to use')
         p.add_argument('--real-name', dest='realname', default=self.realname,
@@ -55,6 +57,9 @@ class Bot:
             self.username = args.username
             self.realname = args.realname
             self.connect(args.network, args.port)
+        if args.channels:
+            for i in self._channelify(args.channels.split(',')):
+                self.join(i)
         return args
 
     def _is_connected(self):
