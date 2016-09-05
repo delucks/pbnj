@@ -38,13 +38,14 @@ class Connection:
         while self.linesep not in self.read:
             self.read += self.conn.recv(self.recv_bufsz)
         format_msg = lambda x: (str(x[0], 'utf-8'), x[1])
-        message, self.read = format_msg(self.read.split(self.linesep, 1))
+        message, read = format_msg(self.read.split(self.linesep, 1))
         if '\x01' in message:
             message = message.replace('\x01', '')
         log.info('RECV {0}'.format(message))
-        if 'Closing link' in message:  #TODO robustify
+        if not message or 'Closing link' in message:
             log.warning('Got a "Closing link" message back from server')
             return None  # termination of loop
+        self.read = read
         return message
 
     def recieve(self):
@@ -66,11 +67,11 @@ class Connection:
         log.info('SEND ' + message)
 
     def part(self, channel):
-        self.send('PART {0}'.format(channel))
+        self.send('PART {}'.format(channel))
 
     def join(self, channel):
         if self._connected:
-            self.send('JOIN {0}'.format(channel))
+            self.send('JOIN {}'.format(channel))
         else:
             log.error('Someone tried to join a channel before starting')
 
