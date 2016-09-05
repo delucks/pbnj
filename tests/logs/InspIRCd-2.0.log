@@ -1,0 +1,33 @@
+:irc.foo.bar.baz NOTICE Auth :*** Looking up your hostname...
+:irc.foo.bar.baz NOTICE Auth :*** Found your hostname (source-ip-of-connection.isp.com)
+NICK foo
+USER foo bar baz :source-ip-of-connection.isp.com
+:irc.foo.bar.baz NOTICE Auth :Welcome to foobarIRC!
+:irc.foo.bar.baz 001 foo :Welcome to the foobarIRC IRC Network nick!username@source-ip-of-connection.isp.com
+:irc.foo.bar.baz 002 foo :Your host is irc.foo.bar.baz, running version InspIRCd-2.0
+:irc.foo.bar.baz 003 foo :This server was created 11:10:25 Sep 12 2015
+:irc.foo.bar.baz 004 foo irc.foo.bar.baz InspIRCd-2.0 BIRdiorsw FKMOPRabefghijklmnopqrstvz Fabefghjkloqv
+:irc.foo.bar.baz 005 foo AWAYLEN=200 CASEMAPPING=rfc1459 CHANMODES=abegq,k,Ffjl,KMOPRimnprstz CHANNELLEN=64 CHANTYPES=# CHARSET=ascii ELIST=MU EXCEPTS=e EXTB
+AN=,ORUz FNC KICKLEN=255 MAP MAXBANS=60 :are supported by this server
+:irc.foo.bar.baz 005 foo MAXCHANNELS=20 MAXPARA=32 MAXTARGETS=20 MODES=20 NAMESX NETWORK=foobarIRC NICKLEN=32 OVERRIDE PREFIX=(ohv)@%+ SSL=[::]:6697 STARTTLS S
+TATUSMSG=@%+ TOPICLEN=307 :are supported by this server
+:irc.foo.bar.baz 005 foo VBANLIST WALLCHOPS WALLVOICES :are supported by this server
+:irc.foo.bar.baz 042 foo 779AAACWF :your unique ID
+:irc.foo.bar.baz 375 foo :irc.foo.bar.baz message of the day
+:irc.foo.bar.baz 372 foo :-
+:irc.foo.bar.baz 372 foo :-
+:irc.foo.bar.baz 372 foo :-
+:irc.foo.bar.baz 372 foo :-    Welcome to the foo.bar.baz network
+:irc.foo.bar.baz 372 foo :-            To register a nick /msg nickserv help to start
+:irc.foo.bar.baz 372 foo :-
+:irc.foo.bar.baz 372 foo :-
+:irc.foo.bar.baz 376 foo :End of message of the day.
+:irc.foo.bar.baz 251 foo :There are 11 users and 3 invisible on 1 servers
+:irc.foo.bar.baz 254 foo 2 :channels formed
+:irc.foo.bar.baz 255 foo :I have 14 clients and 0 servers
+:irc.foo.bar.baz 265 foo :Current Local Users: 14  Max: 14
+:irc.foo.bar.baz 266 foo :Current Global Users: 14  Max: 14
+:nick!username@source-ip-of-connection.isp.com JOIN :#defaultchannel
+:irc.foo.bar.baz 353 foo = #defaultchannel :a bunch of nicks
+:irc.foo.bar.baz 366 foo #defaultchannel :End of /NAMES list.
+ERROR :Closing link: (foo@source-ip-of-connection.isp.com) [Quit:foo\r\n]
