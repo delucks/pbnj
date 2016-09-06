@@ -1,8 +1,4 @@
-# pbjbt
-# birch
-# sammich
-# spcc/specc = simple python chat client
-# circuit = contemporary irc user interaction toolkit
+# pbnj
 
 TODO:
 - Decide on a license
@@ -10,9 +6,9 @@ TODO:
 - Ensure that the whole thing builds properly every time (test it)
 - Write a full implementation of a bot using the framework
 
-pbjbt is an python IRC bot library and framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
+pbnj is an python IRC bot library and framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
 
-pbjbt is:
+pbnj is:
 - Tested (hovering around 100% code coverage)
 - Small (less than 500 lines of code without tests)
 - Portable (only requires the standard library)
@@ -22,7 +18,7 @@ pbjbt is:
 `weather.py`
 
 ```python
-from pbjbt import Bot
+from pbnj import Bot
 bot = Bot('forecaster')
 
 @bot.command('^\.weather')  # regular expression or callable accepted
@@ -43,11 +39,11 @@ The method you decorate with `@bot.command(...)` will reply to the channel that 
 - strings
 - a Generator via yield (all yielded strings will be sent to the channel)
 
-If you return a prepared pbjbt.Reply object, it will execute that. (Prepared replies are TODO)
+If you return a prepared pbnj.Reply object, it will execute that. (Prepared replies are TODO)
 
 ## Requirements
 
-None! Using pbjbt is easy because we only use the standard library.
+None! Using pbnj is easy because we only use the standard library.
 
 `(unless you want to run tests)`
 
@@ -55,7 +51,7 @@ In which case, you need `pytest` and `pytest-cov`. There's a requirements.txt to
 
 ## Message objects
 
-pbjbt hands you a Message object as the only argument to your command functions. This is a message from an IRC channel
+pbnj hands you a Message object as the only argument to your command functions. This is a message from an IRC channel
 or server the bot is a part of, and has a number of fields filled out that you can work with.
 
 Normal fields:
@@ -122,4 +118,4 @@ py.test
 Yeah I know it's weird. Initially I just called this "bot", but as it grew it
 requried a name, so I called it "peanut-butter-jelly bot" as it should be as easy
 to create an IRC bot with this library as it is to create a PB&J sammich.
-Inspired by the terseness of the IRC protocol, I shortened it to "pbjbt".
+Inspired by the terseness of the IRC protocol, I shortened it to "pbjbt", then changed it to "pbnj" for readability or something.

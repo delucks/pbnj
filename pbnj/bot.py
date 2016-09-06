@@ -4,9 +4,9 @@ import inspect
 import logging
 from types import GeneratorType
 
-from pbjbt.connection import Connection
-from pbjbt.models import Message, Command, _builtin_command
-from pbjbt.logger import ColorFormatter
+from pbnj.connection import Connection
+from pbnj.models import Message, Command, _builtin_command
+from pbnj.logger import ColorFormatter
 
 log = logging.getLogger()
 color_formatter = ColorFormatter()

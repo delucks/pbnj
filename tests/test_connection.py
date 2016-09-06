@@ -1,5 +1,5 @@
 import pytest
-from pbjbt.connection import Connection
+from pbnj.connection import Connection
 from tests.common import _wrap, _get_log
 from tests.common import *
 import logging

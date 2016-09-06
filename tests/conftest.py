@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import patch
-from pbjbt.connection import Connection
-from pbjbt.bot import Bot
-from pbjbt.models import Message
+from pbnj.connection import Connection
+from pbnj.bot import Bot
+from pbnj.models import Message
 from tests.common import _wrap, _get_log
 from tests.common import *
 

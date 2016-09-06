@@ -1,7 +1,7 @@
 import pytest
 from random import choice
-from pbjbt.bot import Bot, VERSION
-from pbjbt.models import Message, Command
+from pbnj.bot import Bot, VERSION
+from pbnj.models import Message, Command
 from tests.common import _wrap, _get_log
 from tests.common import *
 import logging

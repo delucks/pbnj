@@ -7,7 +7,7 @@ import logging
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
-from pbjbt.models import Message, Command, _builtin_command
+from pbnj.models import Message, Command, _builtin_command
 
 def test_message_types(privmsg, actionmsg, servermsg):
     # privmsg

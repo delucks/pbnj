@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''tallies up score for a certain string'''
-from pbjbt.bot import Bot
+from pbnj.bot import Bot
 from collections import defaultdict
 
 '''There are builtin commands that come with the bot. If you want to change
