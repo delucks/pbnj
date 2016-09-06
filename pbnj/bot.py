@@ -7,13 +7,13 @@ from types import GeneratorType
 from pbnj.connection import Connection
 from pbnj.models import Message, Command, _builtin_command
 from pbnj.logger import ColorFormatter
+from pbnj import __version__
 
 log = logging.getLogger()
 color_formatter = ColorFormatter()
 sh = logging.StreamHandler()
 sh.setFormatter(color_formatter)
 log.addHandler(sh)
-VERSION='0.0.8'
 
 
 class Bot:
@@ -59,8 +59,7 @@ class Bot:
             self.realname = args.realname
             self.connect(args.network, args.port)
         if args.channels:
-            for i in self._channelify(args.channels.split(',')):
-                self.join(i)
+            self.joinall(args.channels.split(','))
         return args
 
     def _is_connected(self):
@@ -90,7 +89,7 @@ class Bot:
 
     def connect(self, addr, port=6667):
         if not self._is_connected():
-            self.conn = Connection(addr, port, VERSION)
+            self.conn = Connection(addr, port, __version__)
         return self.conn
 
     def command(self, filterspec):
@@ -180,7 +179,7 @@ class Bot:
     @_builtin_command('version')
     def version(self, message):
         '''display the library version'''
-        return '{}: {} version {}'.format(message.nick, self.nick, VERSION)
+        return '{}: {} version {}'.format(message.nick, self.nick, __version__)
 
     @_builtin_command('ping')
     def ping(self, message):

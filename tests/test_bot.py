@@ -1,6 +1,6 @@
 import pytest
 from random import choice
-from pbnj.bot import Bot, VERSION
+from pbnj.bot import Bot, __version__
 from pbnj.models import Message, Command
 from tests.common import _wrap, _get_log
 from tests.common import *
@@ -39,6 +39,8 @@ def test_bot_join_part(connected_bot, channels):
     j_msgz = [_wrap('JOIN {}'.format(i)) for i in channels]
     p_msgz = [_wrap('PART {}'.format(i)) for i in channels]
     with connected_bot.conn:
+        connected_bot.join('#foobar')
+        assert _wrap('JOIN #foobar') in fs.sent
         connected_bot.joinall(MALFORMED_CHANNELS)
         for c in channels:
             assert c in connected_bot.channels
@@ -153,7 +155,7 @@ def test_builtin_ping(connected_bot):
 
 def test_builtin_version(connected_bot):
     log = ':foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.version'
-    reply = 'PRIVMSG #defaultchannel :foo: {} version {}'.format(NICK, VERSION)
+    reply = 'PRIVMSG #defaultchannel :foo: {} version {}'.format(NICK, __version__)
     fs = connected_bot.conn.conn
     fs._set_reply_text(log)
     m = Message(log)
