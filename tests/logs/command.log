@@ -1,4 +1,5 @@
 :foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.help
-:foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.ping
+:foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.test_cmd
 :foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.version
+:K_G!~delucks@localhost.localdomain PRIVMSG botname :.help
 :Closing link: (foo@source-ip-of-connection.isp.com) [Quit:foo\r\n]

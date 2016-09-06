@@ -153,22 +153,14 @@ class Bot:
                     # we have something to hand back
                     if type(resp) == str:
                         log.info('Response is a string, sending...')
-                        if '#' in message.dest:
-                            return self.conn.message(message.dest, resp)
-                        else:
-                            # this is a private message
-                            return self.conn.message(message.nick, resp)
+                        return self.conn.message(message.reply_dest, resp)
                     elif isinstance(resp, GeneratorType):
                         log.info(
                             'Response is a generator, giving back the contents'
                         )
                         success = True
                         for reply in resp:
-                            if '#' in message.dest:
-                                success = success and self.conn.message(message.dest, reply)
-                            else:
-                                # this is a private message
-                                success = success and self.conn.message(message.nick, reply)
+                            success = success and self.conn.message(message.reply_dest, reply)
                         return success
                     elif isinstance(resp, bool):
                         logging.debug('the function handed back a boolean, returning it')
@@ -203,7 +195,7 @@ class Bot:
             return 'Usage: .join #channelname'
         else:
             log.debug('We got channels: {}'.format(message.args))
-            return self.join(message.args)
+            return self.joinall(message.args)
 
     @_builtin_command('help')
     def help(self, message):

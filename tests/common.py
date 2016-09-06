@@ -6,6 +6,10 @@ REALNAME = 'baz'
 HOSTNAME = 'localhost'
 RANDOM_TEST_RUNS = 100
 PORT = 6667
+SAMPLE_PRIV = ':delucks!~delucks@localhost.localdomain PRIVMSG #channel :hello'
+SAMPLE_ACTION = ':delucks!~delucks@localhost.localdomain PRIVMSG #channel :ACTION something'
+SAMPLE_SERVER = ':irc.example.net 366 foo #channel :End of NAMES list'
+
 import os
 
 

@@ -3,8 +3,8 @@
 from pbjbt.bot import Bot
 from collections import defaultdict
 
-'''this shows how to set up a custom prefix for builtin commands- $help will be
-recognized by this bot now, as an example'''
+'''There are builtin commands that come with the bot. If you want to change
+their prefix from '.', you can do it like this:'''
 b = Bot('tally', builtin_prefix='^\$')
 
 all_votes = defaultdict(list)

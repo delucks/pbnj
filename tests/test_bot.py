@@ -39,7 +39,7 @@ def test_bot_join_part(connected_bot, channels):
     j_msgz = [_wrap('JOIN {}'.format(i)) for i in channels]
     p_msgz = [_wrap('PART {}'.format(i)) for i in channels]
     with connected_bot.conn:
-        connected_bot.join(MALFORMED_CHANNELS)
+        connected_bot.joinall(MALFORMED_CHANNELS)
         for c in channels:
             assert c in connected_bot.channels
         for m in j_msgz:
@@ -71,7 +71,7 @@ def test_command(connected_bot):
 
 def test_run_join(response_bot, channels):
     fs = response_bot.conn.conn
-    response_bot.join(MALFORMED_CHANNELS)
+    response_bot.joinall(MALFORMED_CHANNELS)
     response_bot.run()
     j_msgz = [_wrap('JOIN {}'.format(i)) for i in channels]
     for m in j_msgz:
@@ -163,7 +163,7 @@ def test_builtin_version(connected_bot):
         assert connected_bot.handle(m)
         assert _wrap(reply) in fs.sent
 
-def test_parse_args(mocked_bot):
+def test_parse_args(connected_bot):
     arg_sets = {
         '-n {0} --user-name {0} --real-name {0}'.format(NICK):
             lambda a: a.nick == a.username == a.realname == NICK,
@@ -171,15 +171,18 @@ def test_parse_args(mocked_bot):
         '--port 13212 --network irc.some.place.net':
             lambda a: a.port == 13212 and a.network == 'irc.some.place.net',
         '-d -c': lambda a: a.debug and a.no_color,
+        '--channels foo,#bar,baz': lambda a: a.channels == 'foo,#bar,baz'
     }
     for arguments, check in arg_sets.items():
-        args = mocked_bot._parse_args(arguments=arguments.split(), override=False)
+        args = connected_bot._parse_args(arguments=arguments.split(), override=False)
         assert check(args), 'Failed to parse {} correctly'.format(arguments)
     # test overrides
-    xmas_tree = '-n {0} --user-name {0} --real-name {0} --port {1} --network {2}'.format(NICK, PORT, HOSTNAME)
-    args = mocked_bot._parse_args(arguments=xmas_tree.split(), override=True)
-    assert mocked_bot.conn.addr == HOSTNAME
-    assert mocked_bot.conn.port == PORT
-    assert mocked_bot.realname == NICK
-    assert mocked_bot.username == NICK
-    assert mocked_bot.nick == NICK
+    xmas_tree = '-n {0} --channels foo,bar,baz --user-name {0} --real-name {0} --port {1} --network {2}'.format(NICK, PORT, HOSTNAME)
+    args = connected_bot._parse_args(arguments=xmas_tree.split(), override=True)
+    assert connected_bot.conn.addr == HOSTNAME
+    assert connected_bot.conn.port == PORT
+    assert connected_bot.realname == NICK
+    assert connected_bot.username == NICK
+    assert connected_bot.nick == NICK
+    for item in connected_bot._channelify(MALFORMED_CHANNELS):
+        assert item in connected_bot.channels

@@ -26,9 +26,8 @@ class Message:
 
     def __eq__(self, other):
         self_attr = attr_filter(self)
-        other_attr = attr_filter(other)
         for item, val in self_attr.items():
-            if val != getattr(other, item, None):
+            if val != getattr(other, item, False):
                 return False
         return True
 
@@ -42,7 +41,7 @@ class Message:
         if '@' in host:
             hostmask = host[1:] if host.startswith(':') else host
             re_matches = re.match(
-                '^([a-zA-Z0-9]+)!~?([a-zA-Z0-9\ ]+)@(.*)',
+                '^([a-zA-Z0-9_\-]+)!~?([a-zA-Z0-9\ ]+)@(.*)',
                 hostmask
             )
             try:
@@ -62,6 +61,10 @@ class Message:
             self.type = int(code) if code.isdigit() else code
         if self.type == 'PRIVMSG':
             self.dest = sp[2]
+            if '#' in self.dest:
+                self.reply_dest = self.dest
+            else:
+                self.reply_dest = self.nick
             m = ' '.join(sp[3:])
             msg = m[1:] if m.startswith(':') else m
             if msg.startswith('ACTION'):
@@ -113,6 +116,8 @@ class Command:
             self.__doc__ == other.__doc__
         )
     def match(self, message):
+        '''try to match an incoming message (quickly) return something falsey if
+        not'''
         if callable(self.filterspec):
             return self.filterspec(message)
         else:
@@ -120,4 +125,4 @@ class Command:
             if message.type == 'PRIVMSG':
                 log.debug('Trying to match {} with {}'.format(message.message, self.filterspec))
                 return re.match(self.filterspec, message.message)
-            return False
+            return None

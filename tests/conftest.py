@@ -42,5 +42,12 @@ def command_bot(connected_bot):
 
 @pytest.fixture
 def privmsg():
-    priv = ':delucks!~delucks@localhost.localdomain PRIVMSG #channel :hello'
-    return Message(priv)
+    return Message(SAMPLE_PRIV)
+
+@pytest.fixture
+def actionmsg():
+    return Message(SAMPLE_ACTION)
+
+@pytest.fixture
+def servermsg():
+    return Message(SAMPLE_SERVER)
