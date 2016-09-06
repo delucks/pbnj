@@ -93,6 +93,8 @@ class Command:
     the bot (a callable or string regex) as well as the callback to hit if a
     message is matched'''
     def __init__(self, filterspec, callback):
+        if not (callable(filterspec) or isinstance(filterspec, str)):
+            raise ValueError('filterspec arg for Command classes must be callable or a string (valid regex)!')
         self.filterspec = filterspec
         self.callback = callback
         self.name = callback.__name__

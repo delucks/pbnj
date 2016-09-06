@@ -17,7 +17,7 @@ VERSION='0.0.8'
 
 
 class Bot:
-    def __init__(self, nick, username=None, realname=None):
+    def __init__(self, nick, username=None, realname=None, builtin_prefix='^\.'):
         self.nick = nick
         self.username = username or nick
         self.realname = realname or nick
@@ -25,8 +25,9 @@ class Bot:
         self.max_msg_len = 300
         self.commands = []
         self.conn = None
+        self.builtin_prefix = builtin_prefix
 
-    def _parse_args(self, arguments=sys.argv[1:], docstring=None, override=False):
+    def _parse_args(self, arguments=sys.argv[1:], docstring=None, override=True):
         '''use argparse to give this Bot additional options from the CLI
         should be called when __name__ == __main__'''
         p = argparse.ArgumentParser(description=docstring or self.nick)
@@ -84,7 +85,7 @@ class Bot:
         for m_name, method in inspect.getmembers(self, inspect.ismethod):
             if '_command' in dir(method):
                 log.debug('{} is a command!'.format(m_name))
-                self.commands.append(Command(method._filterspec, method))
+                self.commands.append(Command(self.builtin_prefix + method._filterspec, method))
         log.debug(str(self.commands))
 
     def connect(self, addr, port=6667):
@@ -184,17 +185,17 @@ class Bot:
         log.debug('No matches found.')
         return False  # couldn't find a match for the command at all
 
-    @_builtin_command('^\.version')
+    @_builtin_command('version')
     def version(self, message):
         '''display the library version'''
         return '{}: {} version {}'.format(message.nick, self.nick, VERSION)
 
-    @_builtin_command('^\.ping')
+    @_builtin_command('ping')
     def ping(self, message):
         '''pong'''
         return '{}: pong'.format(message.nick)
 
-    @_builtin_command('^\.join')
+    @_builtin_command('join')
     def join_multi(self, message):
         '''join a number of channels'''
         if len(message.args) < 1:
@@ -204,7 +205,7 @@ class Bot:
             log.debug('We got channels: {}'.format(message.args))
             return self.join(message.args)
 
-    @_builtin_command('^\.help')
+    @_builtin_command('help')
     def help(self, message):
         '''return name and description of all commands'''
         for command in self.commands:

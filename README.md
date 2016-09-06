@@ -1,4 +1,14 @@
 # pbjbt
+# birch
+# sammich
+# spcc/specc = simple python chat client
+# circuit = contemporary irc user interaction toolkit
+
+TODO:
+- Decide on a license
+- Make a setup.py such that we can get into pypi
+- Ensure that the whole thing builds properly every time (test it)
+- Write a full implementation of a bot using the framework
 
 pbjbt is an python IRC bot library and framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
 
@@ -60,11 +70,26 @@ PRIVMSG/ACTION fields:
 - `message`: trimmed message from the channel
 - `args`: array of everything but the first word in "message"
 
+## Built-in commands
+
+You can change the prefix for these commands by setting the 'builtin_prefix' parameter in the Bot constructor. The default is '^\.'
+
+| Command | Action | Channel/Private/Both? |
+| ------- | ------ | --------------------- |
+| .join {channel} | Join a channel | Both |
+| .version | Display the library version | Both |
+| .ping | Send back "pong" | Both |
+| .help | Show all commands this bot has, with help output of their `__doc__` | Both |
+
 ## Hacking
 
-`vim -S`
+I'm a `vim` user, if you are too: `vim -S etc/Session.vim`
+
+If you want to implement something interesting, send a PR!
 
 ### Running the Tests
+
+Code coverage by loc is about 100%, but use case coverage is nowhere near that number. We welcome new bug reports, if you encounter behavior you don't expect please let us know!
 
 ```shell
 virtualenv -p $(which python3) .
@@ -79,19 +104,13 @@ py.test
 - Prepared Reply objects
 - Chat history functionality, and response generation with basic ML
 
-#### Built-in commands
+#### Possible commands
 
 | Command | Action | Channel/Private/Both? |
 | ------- | ------ | --------------------- |
-| .join {channel} | Join a channel | Both |
 | .log {channel} | Turn on logging for a channel | Both |
 | .calculate {expr} | Calculate some simple arithmetic expression and return the results | Both |
 | .history {query} | Grep log for the query string | Both, if logging is enabled |
-
-#### Extra commands (example?):
-
-| Command | Action | Channel/Private/Both? |
-| ------- | ------ | --------------------- |
 | .weather {zip code} | Curl some weather API for weather info | Both |
 | {word}++/-- | Increment/decrement a counter for a username or word | Channel |
 | s/{regex}/{regex}/ | Apply a regex to the last message a user sent | Both |

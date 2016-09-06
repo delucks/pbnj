@@ -3,7 +3,9 @@
 from pbjbt.bot import Bot
 from collections import defaultdict
 
-b = Bot('tally')
+'''this shows how to set up a custom prefix for builtin commands- $help will be
+recognized by this bot now, as an example'''
+b = Bot('tally', builtin_prefix='^\$')
 
 all_votes = defaultdict(list)
 summarize = lambda v: 'voted {}: {} votes total, {}% positive'.format(
@@ -12,7 +14,7 @@ summarize = lambda v: 'voted {}: {} votes total, {}% positive'.format(
     round(len([i for i in v if i > 0])/len(v)*100, 2)
 )
 
-@b.command('^\.votes')
+@b.command('^\$votes')
 def votes(message):
     '''show current votes'''
     for topic in all_votes:
