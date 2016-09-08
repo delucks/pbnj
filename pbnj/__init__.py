@@ -5,9 +5,8 @@
  .__/ _.__/ _|  _| |
 _|             ___/
 
-Metadata and common stuff for pbnj
 '''
-__version__ = '0.0.8'
-__author__  = 'delucks'
+__version__ = '0.1'
+__author__  = 'James Luck <me@jamesluck.com>'
 __title__   = 'pbnj'
-__license__ = 'BSD' # TODO
+__license__ = 'GNU GPLv3'
