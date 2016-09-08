@@ -1,17 +1,11 @@
 # pbnj
 
-TODO:
-- Decide on a license
-- Make a setup.py such that we can get into pypi
-- Ensure that the whole thing builds properly every time (test it)
-- Write a full implementation of a bot using the framework
-
 pbnj is an python IRC bot library and framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
 
 pbnj is:
-- Tested (hovering around 100% code coverage)
+- Tested (100% code coverage)
 - Small (less than 500 lines of code without tests)
-- Portable (only requires the standard library)
+- Portable (built with the standard library)
 
 ## Demo!
 
@@ -21,45 +15,54 @@ pbnj is:
 from pbnj import Bot
 bot = Bot('forecaster')
 
-@bot.command('^\.weather')  # regular expression or callable accepted
+@bot.command('^\.weather [0-9]{5}')
 def weather(message):
     '''get the weather for a zip code in the US'''
-    # the commands' __doc__ are used in the bot's built-in ".help" command
     zip_code = message.args[0]
     response = requests.get('http://my.weather.com/api/{0}'.format(zip_code))
-    # will be sent back to the source channel by default
     return '{0}: Currently {r.temp} degrees F'.format(message.nick, r=response.json())
 
 if __name__ == '__main__':
     bot.connect('irc.network.com')
+    bot.join('#channel')
     bot.run()
 ```
+
+Channel log:
+```none
+> forecaster joins #channel
+idler:          .weather 32490
+forecaster:     idler: Currently 83 degrees F
+idler:          .help
+forecaster:     idler: weather - get the weather for a zip code in the US
+```
+
+Argument to `@bot.command(...)` can be either a string or a callable that returns a boolean.
+
+If it's a string, the string will be treated as a regular expression on all incoming PRIVMSG messages (anything in a channel or private message). If the regex matches, the command function will execute.
+
+If it's a callable, it will be called with the Message object (see below) of each incoming message. If it returns true, the command function will execute.
 
 The method you decorate with `@bot.command(...)` will reply to the channel that created the message if you return:
 - strings
 - a Generator via yield (all yielded strings will be sent to the channel)
 
-If you return a prepared pbnj.Reply object, it will execute that. (Prepared replies are TODO)
-
 ## Requirements
 
-None! Using pbnj is easy because we only use the standard library.
+None! Using pbnj is easy because we only use the standard library. If you find any code that isn't compatible on your platform, please issue a bug report.
 
-`(unless you want to run tests)`
-
-In which case, you need `pytest` and `pytest-cov`. There's a requirements.txt too!
+If you want to run tests, you need `pytest` and `pytest-cov`. There's a requirements.txt for that too!
 
 ## Message objects
 
-pbnj hands you a Message object as the only argument to your command functions. This is a message from an IRC channel
-or server the bot is a part of, and has a number of fields filled out that you can work with.
+pbnj hands you a Message object as the only argument to your command functions. This is a message from an IRC channel or server the bot is a part of, and has a number of fields filled out that you can work with.
 
 Normal fields:
 - `raw_msg`: Message as recieved off the socket
 - `host`: Hostname the message came from
 - `type`: IRC command the message represents. If this is PRIVMSG or ACTION, additional fields are parsed.
 
-PRIVMSG/ACTION fields:
+`PRIVMSG`/`ACTION` fields:
 - `dest`: channel the message came from
 - `nick`: nick of the user the message came from
 - `realname`: realname of the user the message came from
@@ -68,7 +71,7 @@ PRIVMSG/ACTION fields:
 
 ## Built-in commands
 
-You can change the prefix for these commands by setting the 'builtin_prefix' parameter in the Bot constructor. The default is '^\.'
+You can change the prefix for these commands by setting the 'builtin_prefix' parameter in the Bot constructor. The default is  `^\.`
 
 | Command | Action | Channel/Private/Both? |
 | ------- | ------ | --------------------- |
@@ -119,3 +122,7 @@ Yeah I know it's weird. Initially I just called this "bot", but as it grew it
 requried a name, so I called it "peanut-butter-jelly bot" as it should be as easy
 to create an IRC bot with this library as it is to create a PB&J sammich.
 Inspired by the terseness of the IRC protocol, I shortened it to "pbjbt", then changed it to "pbnj" for readability or something.
+
+## License
+
+pbnj is Copyright (c) 2016, James Luck. It is licensed under the GNU GPLv3. There is a copy of the license included in LICENSE.txt, peruse it there or at https://www.gnu.org/licenses/gpl-3.0.txt
