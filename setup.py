@@ -16,7 +16,7 @@ setup(
     author_email = 'me@jamesluck.com',
     license='GNU GPLv3',
     url = 'https://github.com/delucks/pbnj',
-    download_url = 'https://github.com/delucks/pbnj/tarball/{}'.format(__version__),
+    download_url = 'https://github.com/delucks/pbnj/tarball/v{}'.format(__version__),
     tests_require=test_requirements,
     keywords = ['irc', 'chatbot', 'bot', 'portable', 'framework'],
     classifiers = [],
