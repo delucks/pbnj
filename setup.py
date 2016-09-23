@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from distutils.core import setup
+from setuptools import setup
 import sys
 
 sys.path.extend('.')
@@ -17,7 +17,7 @@ setup(
     license='GNU GPLv3',
     url = 'https://github.com/delucks/pbnj',
     download_url = 'https://github.com/delucks/pbnj/tarball/v{}'.format(__version__),
-    tests_require=test_requirements,
+    tests_requirements=test_requirements,
     keywords = ['irc', 'chatbot', 'bot', 'portable', 'framework'],
     classifiers = [],
 )

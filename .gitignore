@@ -5,5 +5,8 @@
 pip-selftest.json
 __pycache__
 bin/*
+build/*
+dist/*
 lib/*
 include/*
+*.egg-info
