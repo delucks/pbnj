@@ -7,12 +7,16 @@ pbnj is:
 - Small (less than 500 lines of code without tests)
 - Portable (built with the standard library)
 
+## Installing
+
+`pip install pbnj`
+
 ## Demo!
 
 `weather.py`
 
 ```python
-from pbnj import Bot
+from pbnj.bot import Bot
 bot = Bot('forecaster')
 
 @bot.command('^\.weather [0-9]{5}')
@@ -37,15 +41,19 @@ idler:          .help
 forecaster:     idler: weather - get the weather for a zip code in the US
 ```
 
+(More examples can be found in the examples/ directory of this repository)
+
 Argument to `@bot.command(...)` can be either a string or a callable that returns a boolean.
 
 If it's a string, the string will be treated as a regular expression on all incoming PRIVMSG messages (anything in a channel or private message). If the regex matches, the command function will execute.
 
 If it's a callable, it will be called with the Message object (see below) of each incoming message. If it returns true, the command function will execute.
 
-The method you decorate with `@bot.command(...)` will reply to the channel that created the message if you return:
+The function you decorate with `@bot.command(...)` will reply to the channel that created the message if you return:
 - strings
 - a Generator via yield (all yielded strings will be sent to the channel)
+
+Help output is populated automatically from the docstring of your function, with the name of the function used as the command's name.
 
 ## Requirements
 
@@ -102,8 +110,11 @@ py.test
 - SSL Support
 - Prepared Reply objects
 - Chat history functionality, and response generation with basic ML
+- __str__, __repr__, and other methods inside all the classes
+- 100% docstrings on "public" methods
+- Make the help output behavior overrideable
 
-#### Possible commands
+#### Command Ideas
 
 | Command | Action | Channel/Private/Both? |
 | ------- | ------ | --------------------- |
@@ -115,13 +126,6 @@ py.test
 | s/{regex}/{regex}/ | Apply a regex to the last message a user sent | Both |
 | .ping {hostname} | Ping, and display statistics, to host. (needs rate limiting) | Channel |
 | .search {-engine google} {search term} | perform a search and send back the top n results | Private |
-
-## Name?
-
-Yeah I know it's weird. Initially I just called this "bot", but as it grew it
-requried a name, so I called it "peanut-butter-jelly bot" as it should be as easy
-to create an IRC bot with this library as it is to create a PB&J sammich.
-Inspired by the terseness of the IRC protocol, I shortened it to "pbjbt", then changed it to "pbnj" for readability or something.
 
 ## License
 
