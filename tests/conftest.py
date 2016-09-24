@@ -51,3 +51,10 @@ def actionmsg():
 @pytest.fixture
 def servermsg():
     return Message(SAMPLE_SERVER)
+
+@pytest.fixture()
+def channels(mocked_bot):
+    channels = list(mocked_bot._channelify(MALFORMED_CHANNELS))
+    for c in channels:
+        assert c.startswith('#')
+    return channels

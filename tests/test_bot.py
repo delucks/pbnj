@@ -20,13 +20,6 @@ def test_bot_is_connected(mocked_bot):
     mocked_bot.connect(HOSTNAME, PORT)
     assert mocked_bot._is_connected()
 
-@pytest.fixture()
-def channels(mocked_bot):
-    channels = list(mocked_bot._channelify(MALFORMED_CHANNELS))
-    for c in channels:
-        assert c.startswith('#')
-    return channels
-
 def test_messageify(connected_bot):
     fs = connected_bot.conn.conn
     inspired = _get_log('InspIRCd-2.0.log')
