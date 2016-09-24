@@ -17,7 +17,7 @@ log.addHandler(sh)
 
 
 class Bot:
-    def __init__(self, nick, username=None, realname=None, builtin_prefix='^\.'):
+    def __init__(self, nick, username=None, realname=None, builtin_prefix='^\.', ssl=False):
         self.nick = nick
         self.username = username or nick
         self.realname = realname or nick
@@ -26,6 +26,7 @@ class Bot:
         self.commands = []
         self.conn = None
         self.builtin_prefix = builtin_prefix
+        self.ssl = ssl
 
     def _parse_args(self, arguments=sys.argv[1:], docstring=None, override=True):
         '''use argparse to give this Bot additional options from the CLI
@@ -43,6 +44,8 @@ class Bot:
                        help='FQDN of IRC network to connect to')
         p.add_argument('--port', type=int, default=6667,
                        help='specify different port for the connection')
+        p.add_argument('-s', '--ssl', action='store_true',
+                       help='use SSL in your connection to the network')
         p.add_argument('--channels',
                        help='comma-separated channels to connect to when joining')
         p.add_argument('--user-name', dest='username', default=self.username,
@@ -58,6 +61,7 @@ class Bot:
             self.username = args.username
             self.realname = args.realname
             self.connect(args.network, args.port)
+            self.ssl = args.ssl
         if args.channels:
             self.joinall(args.channels.split(','))
         return args
@@ -90,7 +94,7 @@ class Bot:
     def connect(self, addr, port=6667):
         '''create a connection to an address, or return one if it already exists'''
         if not self._is_connected():
-            self.conn = Connection(addr, port, __version__)
+            self.conn = Connection(addr, port, __version__, use_ssl=self.ssl)
         return self.conn
 
     def command(self, filterspec):

@@ -3,7 +3,7 @@
 pbnj is an python IRC bot library and framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
 
 pbnj is:
-- Tested (100% code coverage)
+- Tested (near complete code coverage)
 - Small (less than 500 lines of code without tests)
 - Portable (built with the standard library)
 
@@ -107,7 +107,6 @@ py.test
 
 ### TODOs
 
-- SSL Support
 - Prepared Reply objects
 - Chat history functionality, and response generation with basic ML
 - __str__, __repr__, and other methods inside all the classes

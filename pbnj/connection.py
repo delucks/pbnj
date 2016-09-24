@@ -1,3 +1,4 @@
+import ssl
 import socket
 import logging
 log = logging.getLogger()
@@ -8,8 +9,12 @@ class Connection:
     The only *magic* this class does is respond to PING messages with PONG
     messages, which I see as an essential part of maintaining a Connection
     '''
-    def __init__(self, addr, port, version='-1', timeout=10.0, recv_bufsz=4096):
-        self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def __init__(self, addr, port, version='-1', timeout=10.0, recv_bufsz=4096, use_ssl=False):
+        conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if use_ssl or port == 6697:
+            self.conn = ssl.wrap_socket(conn, cert_reqs=ssl.CERT_REQUIRED)
+        else:
+            self.conn = conn
         self.addr = addr
         self.port = port
         self.version = version
@@ -22,9 +27,13 @@ class Connection:
 
     def __enter__(self):
         '''set up the socket connection and be ready for sending data'''
-        self.conn.connect((self.addr, self.port))
-        self._connected = True
-        return self
+        try:
+            self.conn.connect((self.addr, self.port))
+            self._connected = True
+            return self
+        except ssl.SSLError:
+            log.fatal('Failed to verify the connection to the server via SSL')
+            raise
 
     def __exit__(self, type, value, traceback):
         '''close down everything that needs to be closed'''
@@ -78,7 +87,7 @@ class Connection:
         if self._connected:
             return self.send('JOIN {}'.format(channel))
         else:
-            log.error('Someone tried to join a channel before starting')
+            log.info('Tried to join a channel before starting, will join when connected')
             return False
 
     def message(self, channel, message):
