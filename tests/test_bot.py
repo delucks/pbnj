@@ -15,6 +15,12 @@ def test_bot_init():
     assert not b.conn, 'Connection was initialized'
     assert not b.commands, 'Command got inserted before run()'
 
+def test_raw_send(connected_bot):
+    fs = connected_bot.conn.conn
+    message = 'oh jeez rick'
+    assert connected_bot.raw_send(message)
+    assert _wrap(message) in fs.sent
+
 def test_bot_is_connected(mocked_bot):
     assert not mocked_bot._is_connected()
     mocked_bot.connect(HOSTNAME, PORT)

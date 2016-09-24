@@ -88,6 +88,7 @@ class Bot:
         log.debug(str(self.commands))
 
     def connect(self, addr, port=6667):
+        '''create a connection to an address, or return one if it already exists'''
         if not self._is_connected():
             self.conn = Connection(addr, port, __version__)
         return self.conn
@@ -120,6 +121,11 @@ class Bot:
         for channel in self._channelify(channels):
             self.channels.remove(channel)
             self.conn.part(channel)
+
+    def raw_send(self, message):
+        '''deliver a message directly to the connection- useful for doing things
+        like MODE'''
+        return self.conn.send(message)
 
     def run(self):
         '''set up and connect the bot, start looping!'''
