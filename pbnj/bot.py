@@ -71,6 +71,9 @@ class Bot:
         return self.conn
 
     def command(self, filterspec):
+        '''the decorator which marks an external function as a Command in the
+        bot's context
+        '''
         def real_decorator(function):
             log.debug('Creating command for function {}'.format(function))
             c = Command(filterspec, function)

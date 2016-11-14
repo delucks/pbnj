@@ -109,9 +109,8 @@ py.test
 
 - Prepared Reply objects
 - Chat history functionality, and response generation with basic ML
-- __str__, __repr__, and other methods inside all the classes
-- 100% docstrings on "public" methods
 - Make the help output behavior overrideable
+- Exposing a logger to users
 
 #### Command Ideas
 

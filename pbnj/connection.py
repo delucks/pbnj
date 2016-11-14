@@ -15,6 +15,7 @@ class Connection:
             self.conn = ssl.wrap_socket(conn, cert_reqs=ssl.CERT_REQUIRED)
         else:
             self.conn = conn
+        self.ssl = use_ssl
         self.addr = addr
         self.port = port
         self.version = version
@@ -24,6 +25,16 @@ class Connection:
         self.read = b''
         self.linesep = b'\r\n'
         self._connected = False
+
+    def __str__(self):
+        return 'pbnj.connection.Connection to {}:{}, ssl {}'.format(
+            addr,
+            port,
+            'on' if self.ssl else 'off'
+        )
+    
+    def __repr___(self):
+        return self.__str__()
 
     def __enter__(self):
         '''set up the socket connection and be ready for sending data'''
@@ -58,7 +69,8 @@ class Connection:
         return message
 
     def recieve(self):
-        '''turn recieving from the socket into a generator!'''
+        '''recieve lines of text from our socket and return them as a Generator
+        '''
         while True:
             message = self._recv()
             if not message:
