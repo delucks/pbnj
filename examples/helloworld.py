@@ -2,6 +2,7 @@
 '''simple examples of the library that just send text back to the channel
 it came from'''
 from pbnj.bot import Bot
+from pbnj import default_argparser
 
 bot = Bot('hello')
 
@@ -11,5 +12,5 @@ def helloworld(message):
     return '{0}: Hello world!'.format(message.nick)
 
 if __name__ == '__main__':
-    bot._parse_args(docstring=__doc__, override=True)
+    default_argparser(override=bot, docstring=__doc__)
     bot.run()

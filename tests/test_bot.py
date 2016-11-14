@@ -1,5 +1,6 @@
 import pytest
 from random import choice
+from pbnj import default_argparser
 from pbnj.bot import Bot, __version__
 from pbnj.models import Message, Command
 from tests.common import _wrap, _get_log
@@ -164,22 +165,22 @@ def test_builtin_version(connected_bot):
         assert connected_bot.handle(m)
         assert _wrap(reply) in fs.sent
 
-def test_parse_args(connected_bot):
+def test_parse_args(connected_bot, capsys):
     arg_sets = {
         '-n {0} --user-name {0} --real-name {0}'.format(NICK):
             lambda a: a.nick == a.username == a.realname == NICK,
         '-q': lambda a: a.quiet,
         '--port 13212 --network irc.some.place.net':
             lambda a: a.port == 13212 and a.network == 'irc.some.place.net',
-        '-d -c': lambda a: a.debug and a.no_color,
+        '-d --no-color': lambda a: a.debug and a.no_color,
         '--channels foo,#bar,baz': lambda a: a.channels == 'foo,#bar,baz'
     }
     for arguments, check in arg_sets.items():
-        args = connected_bot._parse_args(arguments=arguments.split(), override=False)
+        args = default_argparser(arguments=arguments.split())
         assert check(args), 'Failed to parse {} correctly'.format(arguments)
     # test overrides
     xmas_tree = '-n {0} --channels foo,bar,baz --user-name {0} --real-name {0} --port {1} --network {2}'.format(NICK, PORT, HOSTNAME)
-    args = connected_bot._parse_args(arguments=xmas_tree.split(), override=True)
+    args = default_argparser(arguments=xmas_tree.split(), override=connected_bot)
     assert connected_bot.conn.addr == HOSTNAME
     assert connected_bot.conn.port == PORT
     assert connected_bot.realname == NICK
@@ -187,3 +188,7 @@ def test_parse_args(connected_bot):
     assert connected_bot.nick == NICK
     for item in connected_bot._channelify(MALFORMED_CHANNELS):
         assert item in connected_bot.channels
+    # check for --version
+    args = default_argparser(arguments=['-v'])
+    out, err = capsys.readouterr() 
+    assert 'pbnj version' in out

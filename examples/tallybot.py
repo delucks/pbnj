@@ -2,6 +2,7 @@
 '''small bot that tallies up scores for strings that are incremented or
 decremented in its channels and saves them to a sqlite database'''
 from pbnj.bot import Bot
+from pbnj import default_argparser
 from collections import defaultdict
 import sqlite3
 
@@ -81,6 +82,6 @@ def increment(message):
     return '{}: {}'.format(topic, summarize(topic, cursor))
 
 if __name__ == '__main__':
-    b._parse_args(override=True)
+    default_argparser(override=b, docstring=__doc__)
     b.run()
     db.close()

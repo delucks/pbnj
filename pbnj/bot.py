@@ -1,70 +1,43 @@
-import sys
-import argparse
 import inspect
 import logging
 from types import GeneratorType
 
 from pbnj.connection import Connection
 from pbnj.models import Message, Command, _builtin_command
-from pbnj.logger import ColorFormatter
 from pbnj import __version__
 
 log = logging.getLogger()
-color_formatter = ColorFormatter()
-sh = logging.StreamHandler()
-sh.setFormatter(color_formatter)
-log.addHandler(sh)
 
 
 class Bot:
-    def __init__(self, nick, username=None, realname=None, builtin_prefix='^\.', ssl=False):
+    def __init__(
+            self,
+            nick,
+            initial_channels=[],
+            username=None,
+            realname=None,
+            builtin_prefix='^\.',
+            ssl=False
+        ):
         self.nick = nick
         self.username = username or nick
         self.realname = realname or nick
-        self.channels = []
+        self.channels = initial_channels
         self.max_msg_len = 300
         self.commands = []
         self.conn = None
         self.builtin_prefix = builtin_prefix
         self.ssl = ssl
 
-    def _parse_args(self, arguments=sys.argv[1:], docstring=None, override=True):
-        '''use argparse to give this Bot additional options from the CLI
-        should be called when __name__ == __main__'''
-        p = argparse.ArgumentParser(description=docstring or self.nick)
-        p.add_argument('-n', '--nick', default=self.nick,
-                       help='specify different nickname to use')
-        p.add_argument('-d', '--debug', action='store_true',
-                       help='increase logging verbosity to DEBUG')
-        p.add_argument('-q', '--quiet', action='store_true',
-                       help='decrease logging verbosity to WARNING')
-        p.add_argument('--no-color', action='store_true',
-                       help='disable coloration of logging output')
-        p.add_argument('--network', default='127.0.0.1',
-                       help='FQDN of IRC network to connect to')
-        p.add_argument('--port', type=int, default=6667,
-                       help='specify different port for the connection')
-        p.add_argument('-s', '--ssl', action='store_true',
-                       help='use SSL in your connection to the network')
-        p.add_argument('-c', '--channels',
-                       help='comma-separated channels to connect to when joining')
-        p.add_argument('--user-name', dest='username', default=self.username,
-                       help='specify different name to use')
-        p.add_argument('--real-name', dest='realname', default=self.realname,
-                       help='specify different realname to use')
-        args = p.parse_args(arguments)
-        log_lvl = logging.DEBUG if args.debug else logging.WARNING if args.quiet else logging.INFO
-        color_formatter.color_enabled=not args.no_color
-        log.setLevel(log_lvl)
-        if override:
-            self.nick = args.nick
-            self.username = args.username
-            self.realname = args.realname
-            self.connect(args.network, args.port)
-            self.ssl = args.ssl
-        if args.channels:
-            self.joinall(args.channels.split(','))
-        return args
+    def __str__(self):
+        return 'pbnj Bot {}'.format(self.nick)
+
+    def __repr__(self):
+        return 'pbnj Bot {}, (user: {} real: {})'.format(
+            self.nick,
+            self.username,
+            self.realname
+        )
 
     def _is_connected(self):
         return self.conn is not None
@@ -131,7 +104,7 @@ class Bot:
         like MODE'''
         return self.conn.send(message)
 
-    def run(self):
+    def run(self, callbacks=[]):
         '''set up and connect the bot, start looping!'''
         self._activate_commands()
         # start the connection
@@ -172,7 +145,7 @@ class Bot:
                             success = success and self.conn.message(message.reply_dest, reply)
                         return success
                     elif isinstance(resp, bool):
-                        logging.debug('the function handed back a boolean, returning it')
+                        log.debug('the function handed back a boolean, returning it')
                         return resp
                     else:
                         log.warning('Got back a weird type from a command')
