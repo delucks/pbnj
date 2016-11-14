@@ -38,7 +38,7 @@ class Bot:
                        help='increase logging verbosity to DEBUG')
         p.add_argument('-q', '--quiet', action='store_true',
                        help='decrease logging verbosity to WARNING')
-        p.add_argument('-c', '--no-color', action='store_true',
+        p.add_argument('--no-color', action='store_true',
                        help='disable coloration of logging output')
         p.add_argument('--network', default='127.0.0.1',
                        help='FQDN of IRC network to connect to')
@@ -46,7 +46,7 @@ class Bot:
                        help='specify different port for the connection')
         p.add_argument('-s', '--ssl', action='store_true',
                        help='use SSL in your connection to the network')
-        p.add_argument('--channels',
+        p.add_argument('-c', '--channels',
                        help='comma-separated channels to connect to when joining')
         p.add_argument('--user-name', dest='username', default=self.username,
                        help='specify different name to use')
