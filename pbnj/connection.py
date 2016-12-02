@@ -32,26 +32,37 @@ class Connection:
             port,
             'on' if self.ssl else 'off'
         )
-    
+
     def __repr___(self):
         return self.__str__()
 
     def __enter__(self):
-        '''set up the socket connection and be ready for sending data'''
-        try:
-            self.conn.connect((self.addr, self.port))
-            self._connected = True
-            return self
-        except ssl.SSLError:
-            log.fatal('Failed to verify the connection to the server via SSL')
-            raise
+        self._connect()
+        return self
 
     def __exit__(self, type, value, traceback):
+        if self._connected:
+            self._cleanup()
+
+    def _cleanup(self):
         '''close down everything that needs to be closed'''
         self.send('QUIT :{0}/{1}'.format(self.nick, self.version))
         log.warning('Closing socket and IRC connections')
         self._connected = False
         self.conn.close()
+
+    def _connect(self):
+        '''set up the socket connection and be ready for sending data'''
+        # TODO: add retry logic
+        try:
+            self.conn.connect((self.addr, self.port))
+            self._connected = True
+        except ssl.SSLError:
+            log.fatal('Failed to verify the connection to the server via SSL')
+            raise
+
+    def _is_termination_message(self, message):
+        return 'Closing link' in message or 'Server going down' in message
 
     def _recv(self):
         '''recieve only one line from the socket'''
@@ -62,25 +73,31 @@ class Connection:
         if '\x01' in message:
             message = message.replace('\x01', '')
         log.info('RECV {0}'.format(message))
-        if not message or 'Closing link' in message:
-            log.warning('Got a "Closing link" message back from server')
-            return None  # termination of loop
-        self.read = read
-        return message
+        if not message:
+            log.warning('Got a null message from server')
+            raise ConnectionException('Null message')
+        elif self._is_termination_message(message):
+            log.warning('Got a termination message from server')
+            raise ConnectionException('Got a termination message')
+        else:
+            self.read = read
+            return message
 
     def recieve(self):
         '''recieve lines of text from our socket and return them as a Generator
         '''
-        while True:
-            message = self._recv()
-            if not message:
-                log.warning('Got back None, terminating the recv loop')
-                break
-            elif message.startswith('PING'):
-                log.debug('Replying with PONG...')
-                self.send('PONG' + message[4:])
-            else:
-                yield message
+        connected = True
+        while connected:
+            try:
+                message = self._recv()
+                if message.startswith('PING'):
+                    log.debug('Replying with PONG...')
+                    self.send('PONG' + message[4:])
+                else:
+                    yield message
+            except ConnectionException:
+                connected = False
+        self._cleanup()
 
     def send(self, message):
         '''helper method to convert the string, tack on a \r\n and log it'''
@@ -113,3 +130,6 @@ class Connection:
             self.addr, user, realname, hostname))
         n = self.send('NICK {0}'.format(nick))
         return n and self.send('USER {0} {0} {2} :{1}'.format(user, realname, hostname))
+
+
+class ConnectionException(Exception): pass

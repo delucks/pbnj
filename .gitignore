@@ -10,3 +10,6 @@ dist/*
 lib/*
 include/*
 *.egg-info
+share/*
+*.sqlite3
+pip-selfcheck.json
