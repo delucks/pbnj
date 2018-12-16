@@ -1,5 +1,7 @@
 # pbnj
 
+[![Build Status](https://travis-ci.org/delucks/pbnj.svg?branch=master)](https://travis-ci.org/delucks/pbnj)
+
 pbnj is an python IRC bot library and framework. It's designed so you can write an absolute minimum of boilerplate to have a fully working and extensible bot.
 
 pbnj is:
