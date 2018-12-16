@@ -3,8 +3,8 @@ from random import choice
 from pbnj import default_argparser
 from pbnj.bot import Bot, __version__
 from pbnj.models import Message, Command
-from tests.common import _wrap, _get_log
-from tests.common import *
+from common import _get_log, _wrap
+from common import *
 import logging
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)

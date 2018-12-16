@@ -1,8 +1,8 @@
 import re
 import types
 import pytest
-from tests.common import _wrap, _get_log
-from tests.common import *
+from common import _get_log, _wrap
+from common import *
 import logging
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)

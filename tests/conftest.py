@@ -3,8 +3,8 @@ from unittest.mock import patch
 from pbnj.connection import Connection
 from pbnj.bot import Bot
 from pbnj.models import Message
-from tests.common import _wrap, _get_log
-from tests.common import *
+from common import _get_log, _wrap
+from common import *
 
 @pytest.fixture
 def mocked_connection():
