@@ -1,3 +1,4 @@
+import time
 import inspect
 import logging
 from types import GeneratorType
@@ -16,7 +17,9 @@ class Bot:
             initial_channels=[],
             username=None,
             realname=None,
+            use_builtin=True,
             builtin_prefix='^\.',
+            connect_wait=0,
             ssl=False
         ):
         self.nick = nick
@@ -26,7 +29,9 @@ class Bot:
         self.max_msg_len = 300
         self.commands = []
         self.conn = None
+        self.use_builtin = use_builtin
         self.builtin_prefix = builtin_prefix
+        self.connect_wait = connect_wait
         self.ssl = ssl
 
     def __str__(self):
@@ -55,7 +60,7 @@ class Bot:
         for raw_message in text_stream:
             yield Message(raw_message)
 
-    def _activate_commands(self):
+    def _enable_builtin_commands(self):
         '''check for _builtin_command decorated commands, insert them'''
         log.debug('Checking methods for builtin commands')
         for m_name, method in inspect.getmembers(self, inspect.ismethod):
@@ -83,11 +88,6 @@ class Bot:
         log.debug('Exiting command() decorator')
         return real_decorator
 
-    def join(self, channel):
-        '''joins a channel'''
-        self.channels.append(channel)
-        return self.conn.join(channel)
-
     def joinall(self, channels):
         '''joins a bunch of channels'''
         success = True
@@ -107,13 +107,15 @@ class Bot:
         like MODE'''
         return self.conn.send(message)
 
-    def run(self, callbacks=[]):
+    def run(self):
         '''set up and connect the bot, start looping!'''
-        self._activate_commands()
+        if self.use_builtin:
+            self._enable_builtin_commands()
         # start the connection
         with self.conn:
             # make sure we're registered to the irc network
             self.conn.register(self.username, self.nick, self.conn.addr, self.realname)
+            time.sleep(self.connect_delay)
             # handle any channels the user asked us to join
             if self.channels:
                 log.info('Joining initial channels')
@@ -137,10 +139,10 @@ class Bot:
                     log.info('Got a reply: {}'.format(resp))
                     # we have something to hand back
                     if type(resp) == str:
-                        log.info('Response is a string, sending...')
+                        log.debug('Response is a string, sending...')
                         return self.conn.message(message.reply_dest, resp)
                     elif isinstance(resp, GeneratorType):
-                        log.info(
+                        log.debug(
                             'Response is a generator, giving back the contents'
                         )
                         success = True
@@ -148,10 +150,10 @@ class Bot:
                             success = success and self.conn.message(message.reply_dest, reply)
                         return success
                     elif isinstance(resp, bool):
-                        log.debug('the function handed back a boolean, returning it')
+                        log.debug('The function handed back a boolean, returning it')
                         return resp
                     else:
-                        log.warning('Got back a weird type from a command')
+                        log.warning('Got back a weird type from command {}'.format(command.name))
                         log.warning(resp)
                         return False
                 break  # don't check any more methods
@@ -173,11 +175,10 @@ class Bot:
         return '{}: pong'.format(message.nick)
 
     @_builtin_command('join')
-    def join_multi(self, message):
+    def join(self, message):
         '''join a number of channels'''
         if len(message.args) < 1:
-            log.debug('Error for join_multi usage: not enough args')
-            return 'Usage: .join #channelname'
+            return 'Usage: {}join #channelname'.format(self.builtin_prefix)
         else:
             log.debug('We got channels: {}'.format(message.args))
             return self.joinall(message.args)
@@ -185,6 +186,10 @@ class Bot:
     @_builtin_command('help')
     def help(self, message):
         '''return name and description of all commands'''
-        for command in self.commands:
-            log.debug('Sending {} for command list'.format(command.name))
-            yield '{}: {} - {}'.format(message.nick, command.name, str(command))
+        if len(message.args) == 1:
+            # we want detailed help for a specific command
+            for command in self.commands:
+                if command.name == args[1]:
+                    return '{}: {} - {}'.format(message.nick, command.name, str(command))
+        else:
+            return 'Available commands: ' + ' '.join(c.name for c in self.commands)
