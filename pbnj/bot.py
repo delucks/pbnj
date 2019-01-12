@@ -120,7 +120,7 @@ class Bot:
         with self.conn:
             # make sure we're registered to the irc network
             self.conn.register(self.username, self.nick, self.conn.addr, self.realname)
-            time.sleep(self.connect_delay)
+            time.sleep(self.connect_wait)
             # handle any channels the user asked us to join
             if self.channels:
                 log.info("Joining initial channels")
@@ -194,10 +194,10 @@ class Bot:
     @_builtin_command("help")
     def help(self, message):
         """return name and description of all commands"""
-        if len(message.args) == 1:
+        if len(message.args) == 2:
             # we want detailed help for a specific command
             for command in self.commands:
-                if command.name == args[1]:
+                if command.name == message.args[1]:
                     return "{}: {} - {}".format(
                         message.nick, command.name, str(command)
                     )

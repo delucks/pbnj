@@ -39,7 +39,7 @@ def test_bot_join_part(connected_bot, channels):
     j_msgz = [_wrap('JOIN {}'.format(i)) for i in channels]
     p_msgz = [_wrap('PART {}'.format(i)) for i in channels]
     with connected_bot.conn:
-        connected_bot.join('#foobar')
+        connected_bot.joinall(['#foobar'])
         assert _wrap('JOIN #foobar') in fs.sent
         connected_bot.joinall(MALFORMED_CHANNELS)
         for c in channels:
@@ -81,7 +81,7 @@ def test_run_join(response_bot, channels):
 
 def test_handle(command_bot):
     fs = command_bot.conn.conn
-    command_bot._activate_commands()
+    command_bot._enable_builtin_commands()
     inspired = fs.text.splitlines()
     for idx, i in enumerate(inspired):
         m = Message(i)
@@ -95,7 +95,7 @@ def test_weird_callback(command_bot):
     def weird(message):
         return [None, None]
     command_bot.command('.*')(weird)
-    command_bot._activate_commands()
+    command_bot._enable_builtin_commands()
     fs = command_bot.conn.conn
     inspired = fs.text.splitlines()
     for idx, i in enumerate(inspired):
@@ -106,7 +106,7 @@ def test_no_callback(command_bot):
     def no(message):
         pass
     command_bot.command('.*')(no)
-    command_bot._activate_commands()
+    command_bot._enable_builtin_commands()
     fs = command_bot.conn.conn
     inspired = fs.text.splitlines()
     for idx, i in enumerate(inspired):
@@ -116,14 +116,14 @@ def test_no_callback(command_bot):
 def test_builtin_join(connected_bot):
     log = ':foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.join newch'
     bad_log = ':foo!~somenick@irc.foo.bar.baz PRIVMSG #defaultchannel :.join'
-    bad_reply = 'PRIVMSG #defaultchannel :Usage: .join #channelname'
+    bad_reply = 'PRIVMSG #defaultchannel :Usage: ^\\.join #channelname'
     fs = connected_bot.conn.conn
     fs._set_reply_text(log)
     m = Message(log)
     assert not connected_bot.handle(m), 'Commands not yet activated!'
     with connected_bot.conn:
         # try out a proper command
-        connected_bot._activate_commands()
+        connected_bot._enable_builtin_commands()
         assert connected_bot.handle(m)
         assert _wrap('JOIN #newch') in fs.sent
         # try the case where the user doesn't provide an arg
@@ -138,7 +138,7 @@ def test_builtin_help(connected_bot):
     m = Message(log)
     assert not connected_bot.handle(m), 'Commands not yet activated!'
     with connected_bot.conn:
-        connected_bot._activate_commands()
+        connected_bot._enable_builtin_commands()
         assert connected_bot.handle(m)
 
 def test_builtin_ping(connected_bot):
@@ -149,7 +149,7 @@ def test_builtin_ping(connected_bot):
     m = Message(log)
     assert not connected_bot.handle(m), 'Commands not yet activated!'
     with connected_bot.conn:
-        connected_bot._activate_commands()
+        connected_bot._enable_builtin_commands()
         assert connected_bot.handle(m)
         assert _wrap(reply) in fs.sent
 
@@ -161,7 +161,7 @@ def test_builtin_version(connected_bot):
     m = Message(log)
     assert not connected_bot.handle(m), 'Commands not yet activated!'
     with connected_bot.conn:
-        connected_bot._activate_commands()
+        connected_bot._enable_builtin_commands()
         assert connected_bot.handle(m)
         assert _wrap(reply) in fs.sent
 
