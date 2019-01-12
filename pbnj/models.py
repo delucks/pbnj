@@ -41,7 +41,7 @@ class Message:
         if "@" in host:
             hostmask = host[1:] if host.startswith(":") else host
             re_matches = re.match(
-                "^([a-zA-Z0-9_\-]+)!~?([a-zA-Z0-9\ ]+)@(.*)", hostmask
+                "^([a-zA-Z0-9_\-\|`\[\]]+)!~?([a-zA-Z0-9\ ]+)@(.*)", hostmask
             )
             try:
                 re_groups = re_matches.groups()
