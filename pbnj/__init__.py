@@ -8,7 +8,7 @@ _|             ___/
 """
 import sys
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "James Luck <me@jamesluck.com>"
 __title__ = "pbnj"
 __license__ = "GNU GPLv3"
