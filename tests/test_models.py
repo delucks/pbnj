@@ -4,7 +4,7 @@ import pytest
 from common import _get_log, _wrap
 from common import *
 import logging
-log = logging.getLogger()
+log = logging.getLogger('pbnj')
 log.setLevel(logging.DEBUG)
 
 from pbnj.models import Message, Command, _builtin_command

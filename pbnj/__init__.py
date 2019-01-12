@@ -23,7 +23,7 @@ def default_argparser(arguments=sys.argv[1:], docstring=None, override=None):
     import argparse
     import logging
     from pbnj.logger import ColorFormatter
-    log = logging.getLogger()
+    log = logging.getLogger('pbnj')
     color_formatter = ColorFormatter()
     sh = logging.StreamHandler()
     sh.setFormatter(color_formatter)

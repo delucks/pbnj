@@ -1,6 +1,6 @@
 import re
 import logging
-log = logging.getLogger()
+log = logging.getLogger('pbnj')
 
 attr_filter = lambda x: {
     a: getattr(x, a)

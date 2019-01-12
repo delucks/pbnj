@@ -7,7 +7,7 @@ from pbnj.connection import Connection
 from pbnj.models import Message, Command, _builtin_command
 from pbnj import __version__
 
-log = logging.getLogger()
+log = logging.getLogger('pbnj')
 
 
 class Bot:

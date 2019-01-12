@@ -6,7 +6,7 @@ from pbnj.models import Message, Command
 from common import _get_log, _wrap
 from common import *
 import logging
-log = logging.getLogger()
+log = logging.getLogger('pbnj')
 log.setLevel(logging.DEBUG)
 
 def test_bot_init():

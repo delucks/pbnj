@@ -1,7 +1,7 @@
 import ssl
 import socket
 import logging
-log = logging.getLogger()
+log = logging.getLogger('pbnj')
 
 
 class Connection:
