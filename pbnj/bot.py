@@ -20,6 +20,7 @@ class Bot:
             use_builtin=True,
             builtin_prefix='^\.',
             connect_wait=0,
+            follow_invite=True,
             ssl=False
         ):
         self.nick = nick
@@ -32,13 +33,14 @@ class Bot:
         self.use_builtin = use_builtin
         self.builtin_prefix = builtin_prefix
         self.connect_wait = connect_wait
+        self.follow_invite = follow_invite
         self.ssl = ssl
 
     def __str__(self):
-        return 'pbnj Bot {}'.format(self.nick)
+        return 'pbnj.Bot {}'.format(self.nick)
 
     def __repr__(self):
-        return 'pbnj Bot {}, (user: {} real: {})'.format(
+        return 'pbnj.Bot {}, (user: {} real: {})'.format(
             self.nick,
             self.username,
             self.realname
@@ -109,6 +111,7 @@ class Bot:
 
     def run(self):
         '''set up and connect the bot, start looping!'''
+        invitation = 'INVITE ' + self.nick
         if self.use_builtin:
             self._enable_builtin_commands()
         # start the connection
@@ -122,6 +125,9 @@ class Bot:
                 for channel in self.channels:
                     self.conn.join(channel)
             for msg in self._messageify(self.conn.recieve()):
+                if self.follow_invite and invitation in msg.raw_msg:
+                    destination = msg.raw_msg.split(':')[-1]
+                    self.joinall([destination])
                 self.handle(msg)
 
     def handle(self, message):
