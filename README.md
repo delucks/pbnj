@@ -55,7 +55,9 @@ The function you decorate with `@bot.command(...)` will reply to the channel tha
 - strings
 - a Generator via yield (all yielded strings will be sent to the channel)
 
-Help output is populated automatically from the docstring of your function, with the name of the function used as the command's name.
+If you decide to use builitn commands (for more info see below), help output will be populated automatically. The docstring of your function is the help message, with the name of the function used as the command's name.
+
+Importantly, `pbnj` logs onto a logger named `pbnj`. If you want to see debugging & connection-related logs, give it some love.
 
 ## Requirements
 
@@ -81,7 +83,7 @@ Normal fields:
 
 ## Built-in commands
 
-You can change the prefix for these commands by setting the 'builtin_prefix' parameter in the Bot constructor. The default is  `^\.`
+`pbnj` ships with a number of commands that most botmakers build standard into their bots, usable by setting the `use_builtin` parameter of the `pbnj.Bot` constructor to true. You can change the prefix for these commands by setting the 'builtin_prefix' parameter in the Bot constructor. The default is  `^\.`
 
 | Command | Action | Channel/Private/Both? |
 | ------- | ------ | --------------------- |
@@ -94,11 +96,11 @@ You can change the prefix for these commands by setting the 'builtin_prefix' par
 
 I'm a `vim` user, if you are too: `vim -S etc/Session.vim`
 
-If you want to implement something interesting, send a PR!
+If you want to implement something interesting, send a PR! The source code is formatted using [black](https://github.com/ambv/black), please use it to format your patches.
 
 ### Running the Tests
 
-Code coverage by loc is about 100%, but use case coverage is nowhere near that number. We welcome new bug reports, if you encounter behavior you don't expect please let us know!
+Code coverage by loc is about 100%, but use case coverage is nowhere near that number. We welcome new bug reports, if you encounter behavior you don't expect please let me know!
 
 ```shell
 virtualenv -p $(which python3) .
