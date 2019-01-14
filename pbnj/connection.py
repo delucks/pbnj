@@ -74,7 +74,7 @@ class Connection:
         message, read = format_msg(self.read.split(self.linesep, 1))
         if "\x01" in message:
             message = message.replace("\x01", "")
-        log.info("RECV {0}".format(message))
+        log.debug("RECV {0}".format(message))
         if not message:
             log.warning("Got a null message from server")
             raise ConnectionException("Null message")
