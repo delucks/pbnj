@@ -109,26 +109,6 @@ pip install -r requirements.txt
 py.test
 ```
 
-### TODOs
-
-- Prepared Reply objects
-- Chat history functionality, and response generation with basic ML
-- Make the help output behavior overrideable
-- Exposing a logger to users
-
-#### Command Ideas
-
-| Command | Action | Channel/Private/Both? |
-| ------- | ------ | --------------------- |
-| .log {channel} | Turn on logging for a channel | Both |
-| .calculate {expr} | Calculate some simple arithmetic expression and return the results | Both |
-| .history {query} | Grep log for the query string | Both, if logging is enabled |
-| .weather {zip code} | Curl some weather API for weather info | Both |
-| {word}++/-- | Increment/decrement a counter for a username or word | Channel |
-| s/{regex}/{regex}/ | Apply a regex to the last message a user sent | Both |
-| .ping {hostname} | Ping, and display statistics, to host. (needs rate limiting) | Channel |
-| .search {-engine google} {search term} | perform a search and send back the top n results | Private |
-
 ## License
 
 pbnj is Copyright (c) 2018, James Luck. It is licensed under the GNU GPLv3. There is a copy of the license included in LICENSE.txt, peruse it there or at https://www.gnu.org/licenses/gpl-3.0.txt
