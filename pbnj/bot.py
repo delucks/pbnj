@@ -21,7 +21,6 @@ class Bot:
         builtin_prefix="^\.",
         connect_wait=0,
         follow_invite=True,
-        ssl=False,
     ):
         self.nick = nick
         self.username = username or nick
@@ -29,12 +28,12 @@ class Bot:
         self.channels = initial_channels
         self.max_msg_len = 300
         self.commands = []
-        self.conn = None
         self.use_builtin = use_builtin
         self.builtin_prefix = builtin_prefix
         self.connect_wait = connect_wait
         self.follow_invite = follow_invite
-        self.ssl = ssl
+        # Will be setup after self.connect() is called
+        self.conn = None
 
     def __str__(self):
         return "pbnj.Bot {}".format(self.nick)
@@ -71,10 +70,10 @@ class Bot:
                 )
         log.debug(str(self.commands))
 
-    def connect(self, addr, port=6667):
+    def connect(self, addr, port=6667, ssl=False):
         """create a connection to an address, or return one if it already exists"""
         if not self._is_connected():
-            self.conn = Connection(addr, port, __version__, use_ssl=self.ssl)
+            self.conn = Connection(addr, port, __version__, use_ssl=ssl)
         return self.conn
 
     def command(self, filterspec):
