@@ -16,6 +16,11 @@ class Message:
     def __init__(self, raw_msg):
         self.raw_msg = raw_msg
         self.message = None
+        # These three are filled out by the parser unless the message misses our regex
+        # Having a default None value is useful to see whether we can perform operations that use the nick
+        self.nick = None
+        self.realname = None
+        self.host = None
         self.parse()
 
     def __str__(self):

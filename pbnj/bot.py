@@ -21,6 +21,7 @@ class Bot:
         builtin_prefix="^\.",
         connect_wait=0,
         follow_invite=True,
+        ignore={},
     ):
         self.nick = nick
         self.username = username or nick
@@ -32,6 +33,9 @@ class Bot:
         self.builtin_prefix = builtin_prefix
         self.connect_wait = connect_wait
         self.follow_invite = follow_invite
+        # Gives control over nicknames & message substrings to discard
+        # Setting ignore['nicks'] is useful for ignoring messages from other bots
+        self.ignore = ignore
         # Will be setup after self.connect() is called
         self.conn = None
 
@@ -113,6 +117,7 @@ class Bot:
     def run(self):
         """set up and connect the bot, start looping!"""
         invitation = "INVITE " + self.nick
+        ignored_nicks = self.ignore.get('nicks', [])
         if self.use_builtin:
             self._enable_builtin_commands()
         # start the connection
@@ -126,9 +131,15 @@ class Bot:
                 for channel in self.channels:
                     self.conn.join(channel)
             for msg in self._messageify(self.conn.recieve()):
+                # Handle invitations to other channels
                 if self.follow_invite and invitation in msg.raw_msg:
                     destination = msg.raw_msg.split(":")[-1]
                     self.joinall([destination])
+                    continue
+                # Check if we should ignore this message based on the content
+                if msg.nick is not None and msg.nick in ignored_nicks:
+                    log.debug("Skipping message from {} as it's in the ignored nicklist".format(msg.nick))
+                    continue
                 self.handle(msg)
 
     def handle(self, message):
