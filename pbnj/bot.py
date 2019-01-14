@@ -117,7 +117,7 @@ class Bot:
     def run(self):
         """set up and connect the bot, start looping!"""
         invitation = "INVITE " + self.nick
-        ignored_nicks = self.ignore.get('nicks', [])
+        ignored_nicks = self.ignore.get("nicks", [])
         if self.use_builtin:
             self._enable_builtin_commands()
         # start the connection
@@ -138,7 +138,11 @@ class Bot:
                     continue
                 # Check if we should ignore this message based on the content
                 if msg.nick is not None and msg.nick in ignored_nicks:
-                    log.debug("Skipping message from {} as it's in the ignored nicklist".format(msg.nick))
+                    log.debug(
+                        "Skipping message from {} as it's in the ignored nicklist".format(
+                            msg.nick
+                        )
+                    )
                     continue
                 self.handle(msg)
 
