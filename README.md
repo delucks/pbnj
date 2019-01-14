@@ -29,7 +29,7 @@ def weather(message):
     return '{0}: Currently {r.temp} degrees F'.format(message.nick, r=response.json())
 
 if __name__ == '__main__':
-    bot.connect('irc.network.com')
+    bot.connect('irc.network.com', port=6697, ssl=True)
     bot.join('#channel')
     bot.run()
 ```
@@ -131,4 +131,4 @@ py.test
 
 ## License
 
-pbnj is Copyright (c) 2016, James Luck. It is licensed under the GNU GPLv3. There is a copy of the license included in LICENSE.txt, peruse it there or at https://www.gnu.org/licenses/gpl-3.0.txt
+pbnj is Copyright (c) 2018, James Luck. It is licensed under the GNU GPLv3. There is a copy of the license included in LICENSE.txt, peruse it there or at https://www.gnu.org/licenses/gpl-3.0.txt
